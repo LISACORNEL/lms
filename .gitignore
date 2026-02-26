@@ -5,3 +5,34 @@
 tags
 node_modules
 __pycache__
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+*.map
+
+# Frappe generated / local
+sites/
+logs/
+*.log
+*.sql
+*.sql.gz
+*.bak
+*.swp
+
+# Env / editor
+.env
+.venv/
+.vscode/
+.idea/
+.DS_Store
