@@ -1,0 +1,187 @@
+{
+ "doctype": "DocType",
+ "name": "Plot Contract",
+ "module": "Lms",
+ "autoname": "naming_series:",
+ "naming_series": "CTR-.YYYY.-.####",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "CTR-.YYYY.-.####"
+  },
+  {
+   "fieldname": "contract_section",
+   "fieldtype": "Section Break",
+   "label": "Contract Details"
+  },
+  {
+   "fieldname": "customer",
+   "fieldtype": "Link",
+   "label": "Customer",
+   "options": "Customer",
+   "reqd": 1
+  },
+  {
+   "fieldname": "plot",
+   "fieldtype": "Link",
+   "label": "Plot",
+   "options": "Plot Master",
+   "reqd": 1,
+   "description": "Only Available plots can be selected"
+  },
+  {
+   "fieldname": "contract_date",
+   "fieldtype": "Date",
+   "label": "Contract Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "contract_status",
+   "fieldtype": "Select",
+   "label": "Contract Status",
+   "options": "Draft\nActive\nCompleted\nCancelled",
+   "default": "Draft",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_deadline",
+   "fieldtype": "Date",
+   "label": "Payment Deadline",
+   "read_only": 1,
+   "description": "Auto-filled from contract date + payment completion days in LMS Settings"
+  },
+  {
+   "fieldname": "financials_section",
+   "fieldtype": "Section Break",
+   "label": "Financials"
+  },
+  {
+   "fieldname": "selling_price",
+   "fieldtype": "Float",
+   "label": "Selling Price (TZS)",
+   "read_only": 1,
+   "description": "Auto-filled from Plot Master"
+  },
+  {
+   "fieldname": "booking_fee_percent",
+   "fieldtype": "Percent",
+   "label": "Booking Fee %",
+   "read_only": 1,
+   "description": "From LMS Settings"
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "booking_fee_amount",
+   "fieldtype": "Float",
+   "label": "Booking Fee Amount (TZS)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "balance_due",
+   "fieldtype": "Float",
+   "label": "Balance Due (TZS)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_schedule_section",
+   "fieldtype": "Section Break",
+   "label": "Payment Schedule"
+  },
+  {
+   "fieldname": "payment_schedule",
+   "fieldtype": "Table",
+   "label": "Payment Schedule",
+   "options": "Plot Contract Payment"
+  },
+  {
+   "fieldname": "payment_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Payment Summary"
+  },
+  {
+   "fieldname": "total_contract_value",
+   "fieldtype": "Float",
+   "label": "Total Contract Value (TZS)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "total_paid",
+   "fieldtype": "Float",
+   "label": "Total Paid (TZS)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "col_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "total_outstanding",
+   "fieldtype": "Float",
+   "label": "Total Outstanding (TZS)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "government_fee_withheld",
+   "fieldtype": "Float",
+   "label": "Government Fee Withheld (TZS)",
+   "read_only": 1,
+   "description": "Calculated from total paid × government share %"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Long Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Plot Contract",
+   "read_only": 1,
+   "print_hide": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Administrator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Sales",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1
+  },
+  {
+   "role": "Finance",
+   "read": 1
+  },
+  {
+   "role": "Auditor",
+   "read": 1
+  }
+ ]
+}

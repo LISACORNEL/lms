@@ -1,0 +1,165 @@
+{
+ "doctype": "DocType",
+ "name": "LMS Settings",
+ "module": "Lms",
+ "issingle": 1,
+ "is_submittable": 0,
+ "track_changes": 1,
+ "fields": [
+  {
+   "fieldname": "company_section",
+   "fieldtype": "Section Break",
+   "label": "Company and Currency"
+  },
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "default_currency",
+   "fieldtype": "Link",
+   "label": "Default Currency",
+   "options": "Currency",
+   "reqd": 1
+  },
+  {
+   "fieldname": "accounts_section",
+   "fieldtype": "Section Break",
+   "label": "GL Account Mappings"
+  },
+  {
+   "fieldname": "land_under_development_account",
+   "fieldtype": "Link",
+   "label": "Land Under Development Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "plot_inventory_account",
+   "fieldtype": "Link",
+   "label": "Plot Inventory Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "customer_advance_account",
+   "fieldtype": "Link",
+   "label": "Customer Advances Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "revenue_account",
+   "fieldtype": "Link",
+   "label": "Plot Sales Revenue Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "cogs_account",
+   "fieldtype": "Link",
+   "label": "Cost of Land Sold Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "tcb_bank_account",
+   "fieldtype": "Link",
+   "label": "TCB Bank Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "government_payable_account",
+   "fieldtype": "Link",
+   "label": "Government Payable Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "forfeited_deposits_account",
+   "fieldtype": "Link",
+   "label": "Forfeited Deposits Income Account",
+   "options": "Account",
+   "reqd": 1
+  },
+  {
+   "fieldname": "warehouse_section",
+   "fieldtype": "Section Break",
+   "label": "Warehouse"
+  },
+  {
+   "fieldname": "plot_inventory_warehouse",
+   "fieldtype": "Link",
+   "label": "Plot Inventory Warehouse",
+   "options": "Warehouse",
+   "reqd": 1
+  },
+  {
+   "fieldname": "defaults_section",
+   "fieldtype": "Section Break",
+   "label": "Default Values"
+  },
+  {
+   "fieldname": "booking_fee_percent",
+   "fieldtype": "Percent",
+   "label": "Booking Fee Percentage",
+   "default": "60",
+   "reqd": 1
+  },
+  {
+   "fieldname": "payment_completion_days",
+   "fieldtype": "Int",
+   "label": "Payment Completion Days",
+   "default": "90",
+   "reqd": 1,
+   "description": "Number of days customer has to complete full payment after booking fee"
+  },
+  {
+   "fieldname": "naming_section",
+   "fieldtype": "Section Break",
+   "label": "Naming Series"
+  },
+  {
+   "fieldname": "naming_series_contract",
+   "fieldtype": "Data",
+   "label": "Contract Naming Series",
+   "default": "CTR-.YYYY.-.####"
+  },
+  {
+   "fieldname": "naming_series_installment_schedule",
+   "fieldtype": "Data",
+   "label": "Installment Schedule Naming Series",
+   "default": "ISCH-.YYYY.-.####"
+  },
+  {
+   "fieldname": "naming_series_tcb_log",
+   "fieldtype": "Data",
+   "label": "TCB Log Naming Series",
+   "default": "TCB-.YYYY.-.####"
+  },
+  {
+   "fieldname": "naming_series_govt_fee",
+   "fieldtype": "Data",
+   "label": "Government Fee Entry Naming Series",
+   "default": "GFE-.YYYY.-.####"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Administrator",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Finance",
+   "read": 1,
+   "write": 0,
+   "create": 0
+  }
+ ]
+}

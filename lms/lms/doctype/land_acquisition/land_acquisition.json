@@ -1,0 +1,248 @@
+{
+ "doctype": "DocType",
+ "name": "Land Acquisition",
+ "module": "Lms",
+ "autoname": "naming_series:",
+ "naming_series": "LACQ-.YYYY.-.####",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "LACQ-.YYYY.-.####"
+  },
+  {
+   "fieldname": "basic_section",
+   "fieldtype": "Section Break",
+   "label": "Land Details"
+  },
+  {
+   "fieldname": "acquisition_name",
+   "fieldtype": "Data",
+   "label": "Acquisition Name",
+   "reqd": 1,
+   "description": "A short descriptive name e.g. Chamwino Block A Land"
+  },
+  {
+   "fieldname": "acquisition_date",
+   "fieldtype": "Date",
+   "label": "Acquisition Date",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nPending Approval\nApproved\nSubdivided",
+   "default": "Draft",
+   "read_only": 1
+  },
+  {
+   "fieldname": "location_section",
+   "fieldtype": "Section Break",
+   "label": "Location"
+  },
+  {
+   "fieldname": "region",
+   "fieldtype": "Data",
+   "label": "Region",
+   "reqd": 1
+  },
+  {
+   "fieldname": "district",
+   "fieldtype": "Data",
+   "label": "District",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "ward",
+   "fieldtype": "Data",
+   "label": "Ward"
+  },
+  {
+   "fieldname": "location_description",
+   "fieldtype": "Small Text",
+   "label": "Location Description"
+  },
+  {
+   "fieldname": "land_details_section",
+   "fieldtype": "Section Break",
+   "label": "Land Information"
+  },
+  {
+   "fieldname": "total_area_sqm",
+   "fieldtype": "Float",
+   "label": "Total Area (sqm)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "land_use_type",
+   "fieldtype": "Select",
+   "label": "Land Use Type",
+   "options": "Residential\nCommercial\nAgricultural\nMixed",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_3",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "legal_status",
+   "fieldtype": "Select",
+   "label": "Legal Status",
+   "options": "Freehold\nRight of Occupancy\nLeasehold",
+   "reqd": 1
+  },
+  {
+   "fieldname": "title_deed_number",
+   "fieldtype": "Data",
+   "label": "Title Deed Number"
+  },
+  {
+   "fieldname": "seller_section",
+   "fieldtype": "Section Break",
+   "label": "Seller Information"
+  },
+  {
+   "fieldname": "seller_name",
+   "fieldtype": "Data",
+   "label": "Seller Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "seller_id_type",
+   "fieldtype": "Select",
+   "label": "Seller ID Type",
+   "options": "National ID\nPassport\nCompany Registration"
+  },
+  {
+   "fieldname": "col_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "seller_id_number",
+   "fieldtype": "Data",
+   "label": "Seller ID Number"
+  },
+  {
+   "fieldname": "cost_section",
+   "fieldtype": "Section Break",
+   "label": "Acquisition Cost"
+  },
+  {
+   "fieldname": "total_acquisition_cost",
+   "fieldtype": "Float",
+   "label": "Total Acquisition Cost",
+   "reqd": 1
+  },
+  {
+   "fieldname": "acquisition_currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "reqd": 1,
+   "default": "TZS"
+  },
+  {
+   "fieldname": "col_break_5",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "exchange_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate",
+   "default": "1.0",
+   "description": "Leave as 1.0 if currency is TZS"
+  },
+  {
+   "fieldname": "acquisition_cost_tzs",
+   "fieldtype": "Float",
+   "label": "Acquisition Cost (TZS)",
+   "read_only": 1,
+   "description": "Auto calculated from cost x exchange rate"
+  },
+  {
+   "fieldname": "approval_section",
+   "fieldtype": "Section Break",
+   "label": "Approval"
+  },
+  {
+   "fieldname": "approved_by",
+   "fieldtype": "Link",
+   "label": "Approved By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "approval_date",
+   "fieldtype": "Date",
+   "label": "Approval Date",
+   "read_only": 1
+  },
+  {
+   "fieldname": "journal_entry",
+   "fieldtype": "Link",
+   "label": "Journal Entry",
+   "options": "Journal Entry",
+   "read_only": 1
+},
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Long Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Land Acquisition",
+   "read_only": 1,
+   "print_hide": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Administrator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Sales",
+   "read": 1,
+   "write": 1,
+   "create": 1
+  },
+  {
+   "role": "Finance",
+   "read": 1
+  },
+  {
+   "role": "Legal",
+   "read": 1
+  },
+  {
+   "role": "Auditor",
+   "read": 1
+  }
+ ]
+}

@@ -85,6 +85,10 @@ app_license = "mit"
 # before_install = "lms.install.before_install"
 # after_install = "lms.install.after_install"
 
+# Migration
+# ---------
+after_migrate = ["lms.migrate.reload_lms_doctypes"]
+
 # Uninstallation
 # ------------
 

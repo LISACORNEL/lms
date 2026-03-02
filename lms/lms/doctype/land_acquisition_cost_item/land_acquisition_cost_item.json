@@ -1,0 +1,33 @@
+{
+ "doctype": "DocType",
+ "name": "Land Acquisition Cost Item",
+ "module": "Lms",
+ "istable": 1,
+ "editable_grid": 1,
+ "fields": [
+  {
+   "fieldname": "item_description",
+   "fieldtype": "Data",
+   "label": "Cost Item",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "amount",
+   "fieldtype": "Float",
+   "label": "Amount",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks",
+   "in_list_view": 1,
+   "columns": 5
+  }
+ ],
+ "permissions": []
+}

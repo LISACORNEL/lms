@@ -1,0 +1,151 @@
+{
+ "doctype": "DocType",
+ "name": "Plot Master",
+ "module": "Lms",
+ "autoname": "naming_series:",
+ "naming_series": "PLT-.YYYY.-.####",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "PLT-.YYYY.-.####"
+  },
+  {
+   "fieldname": "plot_details_section",
+   "fieldtype": "Section Break",
+   "label": "Plot Details"
+  },
+  {
+   "fieldname": "land_acquisition",
+   "fieldtype": "Link",
+   "label": "Land Acquisition",
+   "options": "Land Acquisition",
+   "reqd": 1,
+   "description": "Must be an Approved Land Acquisition"
+  },
+  {
+   "fieldname": "plot_number",
+   "fieldtype": "Data",
+   "label": "Plot Number",
+   "reqd": 1,
+   "description": "Unique plot identifier within this Land Acquisition e.g. A-001"
+  },
+  {
+   "fieldname": "plot_type",
+   "fieldtype": "Select",
+   "label": "Plot Type",
+   "options": "Residential\nCommercial\nMixed-Use",
+   "reqd": 1
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Available\nReserved\nDelivered\nTitle Closed",
+   "default": "Available",
+   "read_only": 1
+  },
+  {
+   "fieldname": "plot_size_sqm",
+   "fieldtype": "Float",
+   "label": "Plot Size (sqm)",
+   "reqd": 1
+  },
+  {
+   "fieldname": "location_description",
+   "fieldtype": "Small Text",
+   "label": "Location / Coordinates"
+  },
+  {
+   "fieldname": "financials_section",
+   "fieldtype": "Section Break",
+   "label": "Financials"
+  },
+  {
+   "fieldname": "allocated_cost",
+   "fieldtype": "Float",
+   "label": "Allocated Cost (TZS)",
+   "read_only": 1,
+   "description": "Auto-filled from Land Acquisition cost per plot"
+  },
+  {
+   "fieldname": "selling_price",
+   "fieldtype": "Float",
+   "label": "Selling Price (TZS)",
+   "reqd": 1,
+   "description": "Price this plot will be sold for"
+  },
+  {
+   "fieldname": "references_section",
+   "fieldtype": "Section Break",
+   "label": "System References"
+  },
+  {
+   "fieldname": "serial_no",
+   "fieldtype": "Data",
+   "label": "Serial No",
+   "read_only": 1,
+   "description": "Auto-assigned on submission"
+  },
+  {
+   "fieldname": "stock_entry",
+   "fieldtype": "Link",
+   "label": "Stock Entry",
+   "options": "Stock Entry",
+   "read_only": 1,
+   "description": "Auto-created on submission"
+  },
+  {
+   "fieldname": "notes_section",
+   "fieldtype": "Section Break",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "notes",
+   "fieldtype": "Long Text",
+   "label": "Notes"
+  },
+  {
+   "fieldname": "amended_from",
+   "fieldtype": "Link",
+   "label": "Amended From",
+   "options": "Plot Master",
+   "read_only": 1,
+   "print_hide": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Administrator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1,
+   "submit": 1,
+   "cancel": 1,
+   "amend": 1
+  },
+  {
+   "role": "Sales",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1
+  },
+  {
+   "role": "Finance",
+   "read": 1
+  },
+  {
+   "role": "Auditor",
+   "read": 1
+  }
+ ]
+}
