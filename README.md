@@ -90,7 +90,7 @@ After installation, go to **LMS Settings** and configure:
 | Customer Advances Account | Liability account for all incoming payments |
 | Plot Sales Revenue Account | Income account recognized at title closure |
 | Cost of Land Sold Account | COGS account recognized at title closure |
-| TCB Bank Account | Bank account for TCB integration |
+| Any Bank Account | Bank account for  integration |
 | Government Payable Account | Liability account for withheld government fees |
 | Forfeited Deposits Income Account | Income account for cancelled contract deposits |
 | Plot Inventory Warehouse | Warehouse where plots are tracked as stock |
