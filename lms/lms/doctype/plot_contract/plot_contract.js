@@ -5,14 +5,44 @@ frappe.ui.form.on('Plot Contract', {
 			'Draft': 'gray',
 			'Active': 'blue',
 			'Completed': 'green',
-			'Cancelled': 'red'
+			'Cancelled': 'red',
+			'Terminated': 'orange'
 		};
 		const color = colors[frm.doc.contract_status] || 'gray';
 		frm.page.set_indicator(frm.doc.contract_status, color);
+
+		if (frm.doc.docstatus === 1 && frm.doc.contract_status === 'Active') {
+			frm.add_custom_button('Terminate Contract', function() {
+				frappe.prompt(
+					{
+						fieldname: 'reason',
+						fieldtype: 'Long Text',
+						label: 'Termination Reason',
+						reqd: 1,
+						description: 'Explain why this contract is being terminated (e.g. buyer failed to complete payment)'
+					},
+					function(values) {
+						frappe.call({
+							method: 'terminate_contract',
+							doc: frm.doc,
+							args: { reason: values.reason },
+							callback: function() {
+								frm.reload_doc();
+							}
+						});
+					},
+					'Terminate Contract',
+					'Terminate'
+				);
+			}, 'Actions');
+		}
 	},
 
 	plot: function(frm) {
-		if (!frm.doc.plot) return;
+		if (!frm.doc.plot) {
+			frm.set_value('land_acquisition', '');
+			return;
+		}
 		frappe.db.get_doc('Plot Master', frm.doc.plot)
 			.then(plot_doc => {
 				if (plot_doc.status !== 'Available') {
@@ -22,39 +52,47 @@ frappe.ui.form.on('Plot Contract', {
 						indicator: 'red'
 					});
 					frm.set_value('plot', '');
+					frm.set_value('land_acquisition', '');
 					return;
 				}
+				frm.set_value('land_acquisition', plot_doc.land_acquisition);
 				frm.set_value('selling_price', plot_doc.selling_price);
-				apply_booking_fee(frm);
+				recalculate_amounts(frm);
 			});
 	},
 
+	booking_fee_percent: function(frm) {
+		recalculate_amounts(frm);
+	},
+
+	payment_completion_days: function(frm) {
+		recalculate_amounts(frm);
+	},
+
 	contract_date: function(frm) {
-		if (frm.doc.selling_price) {
-			apply_booking_fee(frm);
+		if (frm.doc.selling_price && frm.doc.booking_fee_percent) {
+			recalculate_amounts(frm);
 		}
 	}
 
 });
 
-function apply_booking_fee(frm) {
-	Promise.all([
-		frappe.db.get_single_value('LMS Settings', 'booking_fee_percent'),
-		frappe.db.get_single_value('LMS Settings', 'payment_completion_days')
-	]).then(([pct, days]) => {
-		frm.set_value('booking_fee_percent', pct);
-		const fee = (frm.doc.selling_price || 0) * (pct / 100);
-		const balance = (frm.doc.selling_price || 0) - fee;
-		frm.set_value('booking_fee_amount', fee);
-		frm.set_value('balance_due', balance);
+function recalculate_amounts(frm) {
+	const selling_price = frm.doc.selling_price || 0;
+	const pct = frm.doc.booking_fee_percent || 0;
+	if (!selling_price || !pct) return;
 
-		if (frm.doc.contract_date) {
-			const total_days = days || 90;
-			const deadline = frappe.datetime.add_days(frm.doc.contract_date, total_days);
-			frm.set_value('payment_deadline', deadline);
-			build_payment_schedule(frm, fee, balance, total_days);
-		}
-	});
+	const fee = selling_price * (pct / 100);
+	const balance = selling_price - fee;
+	frm.set_value('booking_fee_amount', fee);
+	frm.set_value('balance_due', balance);
+
+	if (!frm.doc.contract_date) return;
+
+	const total_days = frm.doc.payment_completion_days || 90;
+	const deadline = frappe.datetime.add_days(frm.doc.contract_date, total_days);
+	frm.set_value('payment_deadline', deadline);
+	build_payment_schedule(frm, fee, balance, total_days);
 }
 
 function build_payment_schedule(frm, booking_fee, balance, total_days) {

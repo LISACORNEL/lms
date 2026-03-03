@@ -4,6 +4,8 @@
  "module": "Lms",
  "autoname": "naming_series:",
  "naming_series": "LACQ-.YYYY.-.####",
+ "title_field": "acquisition_name",
+ "search_fields": "acquisition_name,status,region",
  "is_submittable": 1,
  "track_changes": 1,
  "fields": [
@@ -50,9 +52,10 @@
   },
   {
    "fieldname": "region",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "label": "Region",
-   "reqd": 1
+   "reqd": 1,
+   "options": "\nArusha\nDar es Salaam\nDodoma\nGeita\nIringa\nKagera\nKatavi\nKigoma\nKilimanjaro\nLindi\nManyara\nMara\nMbeya\nMorogoro\nMtwara\nMwanza\nNjombe\nPwani\nRukwa\nRuvuma\nShinyanga\nSimiyu\nSingida\nSongwe\nTabora\nTanga\nKaskazini Pemba\nKaskazini Unguja\nKusini Pemba\nKusini Unguja\nMjini Magharibi"
   },
   {
    "fieldname": "district",
@@ -114,6 +117,14 @@
    "label": "Seller Information"
   },
   {
+   "fieldname": "seller",
+   "fieldtype": "Link",
+   "label": "Seller (Supplier)",
+   "options": "Supplier",
+   "reqd": 1,
+   "description": "Must exist as a Supplier in ERPNext — used for journal entry on approval"
+  },
+  {
    "fieldname": "seller_name",
    "fieldtype": "Data",
    "label": "Seller Name",
@@ -140,10 +151,17 @@
    "label": "Acquisition Cost"
   },
   {
+   "fieldname": "cost_items",
+   "fieldtype": "Table",
+   "label": "Cost Breakdown",
+   "options": "Land Acquisition Cost Item"
+  },
+  {
    "fieldname": "total_acquisition_cost",
    "fieldtype": "Float",
    "label": "Total Acquisition Cost",
-   "reqd": 1
+   "read_only": 1,
+   "description": "Auto-calculated from cost breakdown rows above"
   },
   {
    "fieldname": "acquisition_currency",
@@ -196,6 +214,43 @@
    "options": "Journal Entry",
    "read_only": 1
 },
+  {
+   "fieldname": "plots_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Plots Summary"
+  },
+  {
+   "fieldname": "total_plots",
+   "fieldtype": "Int",
+   "label": "Total Plots Created",
+   "read_only": 1,
+   "description": "Number of plots subdivided from this acquisition"
+  },
+  {
+   "fieldname": "available_plots",
+   "fieldtype": "Int",
+   "label": "Available Plots",
+   "read_only": 1,
+   "description": "Plots not yet contracted or sold"
+  },
+  {
+   "fieldname": "col_break_plots",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "reserved_plots",
+   "fieldtype": "Int",
+   "label": "Reserved Plots",
+   "read_only": 1,
+   "description": "Plots currently under active contract"
+  },
+  {
+   "fieldname": "delivered_plots",
+   "fieldtype": "Int",
+   "label": "Delivered / Closed Plots",
+   "read_only": 1,
+   "description": "Plots that have been delivered or title closed"
+  },
   {
    "fieldname": "notes_section",
    "fieldtype": "Section Break",

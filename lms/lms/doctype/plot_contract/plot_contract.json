@@ -34,6 +34,14 @@
    "description": "Only Available plots can be selected"
   },
   {
+   "fieldname": "land_acquisition",
+   "fieldtype": "Link",
+   "label": "Land Acquisition",
+   "options": "Land Acquisition",
+   "read_only": 1,
+   "description": "Auto-filled from the selected plot"
+  },
+  {
    "fieldname": "contract_date",
    "fieldtype": "Date",
    "label": "Contract Date",
@@ -47,16 +55,24 @@
    "fieldname": "contract_status",
    "fieldtype": "Select",
    "label": "Contract Status",
-   "options": "Draft\nActive\nCompleted\nCancelled",
+   "options": "Draft\nActive\nCompleted\nCancelled\nTerminated",
    "default": "Draft",
    "read_only": 1
+  },
+  {
+   "fieldname": "payment_completion_days",
+   "fieldtype": "Int",
+   "label": "Payment Completion Days",
+   "reqd": 1,
+   "default": "90",
+   "description": "Number of days from contract date the customer has to complete full payment"
   },
   {
    "fieldname": "payment_deadline",
    "fieldtype": "Date",
    "label": "Payment Deadline",
    "read_only": 1,
-   "description": "Auto-filled from contract date + payment completion days in LMS Settings"
+   "description": "Auto-filled from contract date + payment completion days"
   },
   {
    "fieldname": "financials_section",
@@ -74,8 +90,15 @@
    "fieldname": "booking_fee_percent",
    "fieldtype": "Percent",
    "label": "Booking Fee %",
-   "read_only": 1,
-   "description": "From LMS Settings"
+   "reqd": 1,
+   "description": "Percentage of selling price required as booking fee for this contract"
+  },
+  {
+   "fieldname": "government_share_percent",
+   "fieldtype": "Percent",
+   "label": "Government Share %",
+   "reqd": 1,
+   "description": "Government fee percentage for this contract — deducted at full payment completion"
   },
   {
    "fieldname": "col_break_2",
@@ -134,9 +157,9 @@
   {
    "fieldname": "government_fee_withheld",
    "fieldtype": "Float",
-   "label": "Government Fee Withheld (TZS)",
+   "label": "Expected Government Fee (TZS)",
    "read_only": 1,
-   "description": "Calculated from total paid × government share %"
+   "description": "Selling price × government share % — collected at full payment completion"
   },
   {
    "fieldname": "notes_section",
@@ -147,6 +170,13 @@
    "fieldname": "notes",
    "fieldtype": "Long Text",
    "label": "Notes"
+  },
+  {
+   "fieldname": "termination_reason",
+   "fieldtype": "Long Text",
+   "label": "Termination Reason",
+   "read_only": 1,
+   "description": "Reason recorded when contract was terminated due to non-payment or other cause"
   },
   {
    "fieldname": "amended_from",

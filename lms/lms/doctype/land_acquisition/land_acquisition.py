@@ -6,14 +6,20 @@ from frappe.utils import today, flt
 class LandAcquisition(Document):
 
     def validate(self):
+        self.calculate_total_from_items()
         self.calculate_cost_tzs()
         self.validate_cost()
         self.validate_area()
+
+    def calculate_total_from_items(self):
+        self.total_acquisition_cost = sum(flt(row.amount) for row in self.cost_items)
 
     def calculate_cost_tzs(self):
         self.acquisition_cost_tzs = flt(self.total_acquisition_cost) * flt(self.exchange_rate or 1)
 
     def validate_cost(self):
+        if not self.cost_items:
+            frappe.throw("Add at least one cost item in the Cost Breakdown table.")
         if flt(self.total_acquisition_cost) <= 0:
             frappe.throw("Total Acquisition Cost must be greater than zero.")
 
@@ -47,14 +53,12 @@ class LandAcquisition(Document):
         if not land_account:
             frappe.throw("Land Under Development account not set in LMS Settings.")
 
-        bank_account = frappe.db.get_value(
-            "Account",
-            {"account_number": "1201", "company": company},
-            "name"
-        )
+        seller_payable_account = settings.seller_payable_account
+        if not seller_payable_account:
+            frappe.throw("Seller Payable account not set in LMS Settings.")
 
-        if not bank_account:
-            frappe.throw("Main Operating Bank Account (1201) not found. Please create it in Chart of Accounts.")
+        if not self.seller:
+            frappe.throw("Seller (Supplier) must be set before approval so the journal entry can be posted.")
 
         cost_center = frappe.db.get_value(
             "Cost Center",
@@ -78,10 +82,12 @@ class LandAcquisition(Document):
                     "cost_center": cost_center
                 },
                 {
-                    "account": bank_account,
+                    "account": seller_payable_account,
                     "debit_in_account_currency": 0,
                     "credit_in_account_currency": amount,
-                    "cost_center": cost_center
+                    "cost_center": cost_center,
+                    "party_type": "Supplier",
+                    "party": self.seller
                 }
             ]
         })

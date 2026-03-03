@@ -87,6 +87,14 @@
    "reqd": 1
   },
   {
+   "fieldname": "seller_payable_account",
+   "fieldtype": "Link",
+   "label": "Seller Payable Account",
+   "options": "Account",
+   "reqd": 1,
+   "description": "Creditors account used when land is acquired — Dr Land Under Development / Cr this account"
+  },
+  {
    "fieldname": "warehouse_section",
    "fieldtype": "Section Break",
    "label": "Warehouse"
@@ -97,26 +105,6 @@
    "label": "Plot Inventory Warehouse",
    "options": "Warehouse",
    "reqd": 1
-  },
-  {
-   "fieldname": "defaults_section",
-   "fieldtype": "Section Break",
-   "label": "Default Values"
-  },
-  {
-   "fieldname": "booking_fee_percent",
-   "fieldtype": "Percent",
-   "label": "Booking Fee Percentage",
-   "default": "60",
-   "reqd": 1
-  },
-  {
-   "fieldname": "payment_completion_days",
-   "fieldtype": "Int",
-   "label": "Payment Completion Days",
-   "default": "90",
-   "reqd": 1,
-   "description": "Number of days customer has to complete full payment after booking fee"
   },
   {
    "fieldname": "naming_section",

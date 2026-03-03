@@ -18,7 +18,8 @@ class LMSSettings(Document):
             "cogs_account",
             "tcb_bank_account",
             "government_payable_account",
-            "forfeited_deposits_account"
+            "forfeited_deposits_account",
+            "seller_payable_account"
         ]
 
         for field in account_fields:
