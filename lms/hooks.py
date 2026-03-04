@@ -152,23 +152,11 @@ after_migrate = ["lms.migrate.reload_lms_doctypes"]
 # Scheduled Tasks
 # ---------------
 
-# scheduler_events = {
-# 	"all": [
-# 		"lms.tasks.all"
-# 	],
-# 	"daily": [
-# 		"lms.tasks.daily"
-# 	],
-# 	"hourly": [
-# 		"lms.tasks.hourly"
-# 	],
-# 	"weekly": [
-# 		"lms.tasks.weekly"
-# 	],
-# 	"monthly": [
-# 		"lms.tasks.monthly"
-# 	],
-# }
+scheduler_events = {
+	"daily": [
+		"lms.tasks.daily"
+	],
+}
 
 # Testing
 # -------

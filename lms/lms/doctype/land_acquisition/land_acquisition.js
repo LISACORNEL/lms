@@ -19,7 +19,7 @@ frappe.ui.form.on('Land Acquisition', {
         }
 
         // Show status as a color indicator
-        if (frm.doc.status === "Approved") {
+        if (frm.doc.docstatus === 1 && frm.doc.status === "Approved") {
             frm.dashboard.set_headline_alert(
                 'This Land Acquisition is Approved',
                 'green'

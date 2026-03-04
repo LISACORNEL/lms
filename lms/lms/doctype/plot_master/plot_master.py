@@ -4,9 +4,9 @@ from frappe.utils import flt
 
 
 PLOT_TYPE_TO_ITEM = {
-	"Residential": "RESIDENTIAL-PLOT",
-	"Commercial": "COMMERCIAL-PLOT",
-	"Mixed-Use": "MIXED-USE-PLOT",
+	"Residential": "RESIDENTIAL PLOTS",
+	"Commercial": "COMMERCIAL PLOTS",
+	"Mixed-Use": "MIXED USED PLOTS",
 }
 
 
@@ -93,6 +93,19 @@ class PlotMaster(Document):
 		if not land_account:
 			frappe.throw("Land Under Development account not set in LMS Settings.")
 
+		serial_number = self.name  # PLT-2024-0001 — globally unique, ties stock to this plot
+
+		# Pre-create the Serial No record so ERPNext's validate_serialized_batch()
+		# (which runs on insert, before on_submit) finds it and doesn't throw.
+		if not frappe.db.exists("Serial No", serial_number):
+			sn = frappe.get_doc({
+				"doctype": "Serial No",
+				"serial_no": serial_number,
+				"item_code": item_code,
+				"company": settings.company,
+			})
+			sn.insert(ignore_permissions=True)
+
 		se = frappe.get_doc({
 			"doctype": "Stock Entry",
 			"stock_entry_type": "Material Receipt",
@@ -106,6 +119,8 @@ class PlotMaster(Document):
 					"qty": 1,
 					"basic_rate": flt(self.allocated_cost),
 					"t_warehouse": warehouse,
+					"serial_no": serial_number,
+					"use_serial_batch_fields": 1,
 				}
 			],
 		})
@@ -114,9 +129,10 @@ class PlotMaster(Document):
 		se.submit()
 
 		self.db_set("stock_entry", se.name)
+		self.db_set("serial_no", serial_number)
 
 		frappe.msgprint(
-			f"Plot entered inventory. Stock Entry: {se.name}",
+			f"Plot entered inventory. Stock Entry: {se.name} | Serial No: {serial_number}",
 			indicator="green",
 			alert=True,
 		)

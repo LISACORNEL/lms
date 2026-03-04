@@ -1,5 +1,13 @@
 frappe.ui.form.on('Plot Contract', {
 
+	setup: function(frm) {
+		frm.set_query('plot', function() {
+			return {
+				filters: { status: 'Available' }
+			};
+		});
+	},
+
 	refresh: function(frm) {
 		const colors = {
 			'Draft': 'gray',
@@ -12,6 +20,64 @@ frappe.ui.form.on('Plot Contract', {
 		frm.page.set_indicator(frm.doc.contract_status, color);
 
 		if (frm.doc.docstatus === 1 && frm.doc.contract_status === 'Active') {
+			frm.add_custom_button('Record Payment', function() {
+				let d = new frappe.ui.Dialog({
+					title: 'Record Payment',
+					fields: [
+						{
+							fieldname: 'amount',
+							fieldtype: 'Float',
+							label: 'Amount (TZS)',
+							reqd: 1
+						},
+						{
+							fieldname: 'payment_date',
+							fieldtype: 'Date',
+							label: 'Payment Date',
+							reqd: 1,
+							default: frappe.datetime.get_today()
+						},
+						{
+							fieldname: 'bank_account',
+							fieldtype: 'Link',
+							label: 'Bank Account',
+							options: 'Account',
+							reqd: 1,
+							get_query: function() {
+								return {
+									filters: { account_type: 'Bank' }
+								};
+							}
+						},
+						{
+							fieldname: 'reference_no',
+							fieldtype: 'Data',
+							label: 'Reference No'
+						}
+					],
+					primary_action_label: 'Record Payment',
+					primary_action: function(values) {
+						frappe.call({
+							method: 'record_payment',
+							doc: frm.doc,
+							args: {
+								amount: values.amount,
+								payment_date: values.payment_date,
+								bank_account: values.bank_account,
+								reference_no: values.reference_no || ''
+							},
+							callback: function(r) {
+								if (!r.exc) {
+									d.hide();
+									frm.reload_doc();
+								}
+							}
+						});
+					}
+				});
+				d.show();
+			}, 'Actions');
+
 			frm.add_custom_button('Terminate Contract', function() {
 				frappe.prompt(
 					{
@@ -110,25 +176,33 @@ function build_payment_schedule(frm, booking_fee, balance, total_days) {
 	});
 
 	if (balance > 0) {
-		// Split balance into monthly installments
-		const num_months = Math.round(total_days / 30);
-		const per_installment = Math.floor(balance / num_months);
+		// Build due-day offsets: monthly steps up to (not including) total_days,
+		// then always land exactly on total_days.
+		// e.g. 50 days → [30, 50]   90 days → [30, 60, 90]   45 days → [30, 45]
+		const due_day_offsets = [];
+		let d = 30;
+		while (d < total_days) {
+			due_day_offsets.push(d);
+			d += 30;
+		}
+		due_day_offsets.push(total_days);
 
-		for (let i = 1; i <= num_months; i++) {
-			const due_date = frappe.datetime.add_days(frm.doc.contract_date, i * 30);
-			// Last installment gets any remainder from rounding
-			const amount = (i === num_months)
-				? balance - (per_installment * (num_months - 1))
+		const num_installments = due_day_offsets.length;
+		const per_installment = Math.floor(balance / num_installments);
+
+		due_day_offsets.forEach((offset, i) => {
+			const is_last = (i === num_installments - 1);
+			const amount = is_last
+				? balance - (per_installment * (num_installments - 1))
 				: per_installment;
-
 			frm.add_child('payment_schedule', {
-				installment_number: i + 1,
-				due_date: due_date,
+				installment_number: i + 2,
+				due_date: frappe.datetime.add_days(frm.doc.contract_date, offset),
 				expected_amount: amount,
 				paid_amount: 0,
 				status: 'Pending'
 			});
-		}
+		});
 	}
 
 	frm.refresh_field('payment_schedule');

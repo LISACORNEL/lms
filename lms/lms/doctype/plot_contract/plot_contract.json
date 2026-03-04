@@ -117,6 +117,14 @@
    "read_only": 1
   },
   {
+   "fieldname": "booking_fee_invoice",
+   "fieldtype": "Link",
+   "label": "Booking Fee Invoice",
+   "options": "Sales Invoice",
+   "read_only": 1,
+   "description": "Auto-created on contract submission"
+  },
+  {
    "fieldname": "payment_schedule_section",
    "fieldtype": "Section Break",
    "label": "Payment Schedule"
@@ -160,6 +168,22 @@
    "label": "Expected Government Fee (TZS)",
    "read_only": 1,
    "description": "Selling price × government share % — collected at full payment completion"
+  },
+  {
+   "fieldname": "government_fee_entry",
+   "fieldtype": "Link",
+   "label": "Government Fee Journal Entry",
+   "options": "Journal Entry",
+   "read_only": 1,
+   "description": "Auto-created when contract is fully paid"
+  },
+  {
+   "fieldname": "forfeiture_entry",
+   "fieldtype": "Link",
+   "label": "Forfeiture Journal Entry",
+   "options": "Journal Entry",
+   "read_only": 1,
+   "description": "Auto-created when contract is terminated; all funds paid by customer are forfeited (no refund)"
   },
   {
    "fieldname": "notes_section",
