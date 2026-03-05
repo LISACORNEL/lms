@@ -1,0 +1,9 @@
+{
+ "add_total_row": 0,
+ "doctype": "Report",
+ "is_standard": "Yes",
+ "module": "Lms",
+ "name": "LMS Business Trend",
+ "ref_doctype": "Plot Contract",
+ "report_type": "Script Report"
+}

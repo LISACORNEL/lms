@@ -9,6 +9,7 @@ LMS_DOCTYPES = [
 	("lms", "doctype", "plot_master"),
 	("lms", "doctype", "plot_contract_payment"),
 	("lms", "doctype", "plot_contract"),
+	("lms", "doctype", "plot_handover"),
 ]
 
 

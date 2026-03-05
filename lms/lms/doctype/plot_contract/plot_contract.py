@@ -31,7 +31,7 @@ class PlotContract(Document):
 			active = frappe.db.exists("Plot Contract", {
 				"plot": self.plot,
 				"docstatus": 1,
-				"contract_status": ["in", ["Active", "Completed"]],
+				"contract_status": ["in", ["Ongoing", "Completed"]],
 			})
 			if active:
 				frappe.throw(
@@ -50,6 +50,9 @@ class PlotContract(Document):
 				if not flt(self.selling_price):
 					self.selling_price = plot_data.selling_price
 				self.land_acquisition = plot_data.land_acquisition
+				self.acquisition_name = frappe.db.get_value(
+					"Land Acquisition", plot_data.land_acquisition, "acquisition_name"
+				) or ""
 
 	def calculate_financials(self):
 		if flt(self.selling_price) > 0 and flt(self.booking_fee_percent) > 0:
@@ -131,7 +134,7 @@ class PlotContract(Document):
 
 	def on_submit(self):
 		frappe.db.set_value("Plot Master", self.plot, "status", "Reserved")
-		self.db_set("contract_status", "Active")
+		self.db_set("contract_status", "Ongoing")
 		self._create_sales_invoices()
 
 	def on_cancel(self):
@@ -197,11 +200,13 @@ class PlotContract(Document):
 		for row in self.payment_schedule:
 			if not row.sales_invoice:
 				continue
-			si_doc = frappe.get_doc("Sales Invoice", row.sales_invoice)
+			si_name = row.sales_invoice
+			frappe.db.set_value("Plot Contract Payment", row.name, "sales_invoice", "")
+			si_doc = frappe.get_doc("Sales Invoice", si_name)
 			if si_doc.docstatus == 1:
 				si_doc.cancel()
 			elif si_doc.docstatus == 0:
-				frappe.delete_doc("Sales Invoice", row.sales_invoice, ignore_permissions=True)
+				frappe.delete_doc("Sales Invoice", si_name, ignore_permissions=True)
 
 	def _cancel_unpaid_invoices(self):
 		"""Cancel submitted SIs and delete Draft SIs for all unpaid installments.
@@ -214,9 +219,12 @@ class PlotContract(Document):
 				continue
 			if row.status == "Paid":
 				continue  # settled — leave as-is
-			si_doc = frappe.get_doc("Sales Invoice", row.sales_invoice)
+			si_name = row.sales_invoice
+			# Clear the link first so Frappe's link validator does not block cancellation
+			frappe.db.set_value("Plot Contract Payment", row.name, "sales_invoice", "")
+			si_doc = frappe.get_doc("Sales Invoice", si_name)
 			if si_doc.docstatus == 0:
-				frappe.delete_doc("Sales Invoice", row.sales_invoice, ignore_permissions=True)
+				frappe.delete_doc("Sales Invoice", si_name, ignore_permissions=True)
 			elif si_doc.docstatus == 1:
 				if flt(si_doc.outstanding_amount) > 0:
 					si_doc.cancel()
@@ -270,20 +278,44 @@ class PlotContract(Document):
 		return je.name
 
 	def _post_completion_entries(self, settings):
-		"""Split government's share on full contract payment.
+		"""Recognise revenue and record government fee on full contract payment.
 
 		Only runs once (idempotent guard on government_fee_entry field).
 
 		Accounting:
-		  Dr Customer Advances     (reduce liability)
-		  Cr Government Payable    (record obligation to government)
+		  Dr Customer Advances     (selling_price — clears full liability)
+		  Cr Government Payable    (government_fee_withheld)
+		  Cr Plot Sales Revenue    (selling_price - government_fee_withheld)
 		"""
 		if self.government_fee_entry:
 			return  # already posted
 
-		govt_fee = flt(self.government_fee_withheld)
-		if govt_fee <= 0:
+		selling_price = flt(self.selling_price)
+		govt_fee      = flt(self.government_fee_withheld)
+		net_revenue   = selling_price - govt_fee
+
+		if selling_price <= 0:
 			return
+
+		accounts = [
+			{
+				"account": settings.customer_advance_account,
+				"debit_in_account_currency": selling_price,
+				"party_type": "Customer",
+				"party": self.customer,
+			},
+		]
+
+		if govt_fee > 0:
+			accounts.append({
+				"account": settings.government_payable_account,
+				"credit_in_account_currency": govt_fee,
+			})
+
+		accounts.append({
+			"account": settings.revenue_account,
+			"credit_in_account_currency": net_revenue,
+		})
 
 		je = frappe.get_doc({
 			"doctype": "Journal Entry",
@@ -291,21 +323,10 @@ class PlotContract(Document):
 			"company": settings.company,
 			"voucher_type": "Journal Entry",
 			"user_remark": (
-				f"Government fee — Contract {self.name}, Plot {self.plot}, "
+				f"Revenue recognition — Contract {self.name}, Plot {self.plot}, "
 				f"Customer {self.customer}"
 			),
-			"accounts": [
-				{
-					"account": settings.customer_advance_account,
-					"debit_in_account_currency": govt_fee,
-					"party_type": "Customer",
-					"party": self.customer,
-				},
-				{
-					"account": settings.government_payable_account,
-					"credit_in_account_currency": govt_fee,
-				},
-			],
+			"accounts": accounts,
 		})
 		je.insert(ignore_permissions=True)
 		je.submit()
@@ -460,14 +481,17 @@ class PlotContract(Document):
 				msg += f" Government fee posted — Journal Entry: {je_name}."
 			frappe.msgprint(msg, indicator="green", alert=True)
 
+		elif total_paid > 0:
+			self.db_set("contract_status", "Ongoing")
+
 	# ------------------------------------------------------------------ #
 	#  Contract termination                                                #
 	# ------------------------------------------------------------------ #
 
 	@frappe.whitelist()
 	def terminate_contract(self, reason):
-		if self.contract_status != "Active":
-			frappe.throw("Only Active contracts can be terminated.")
+		if self.contract_status != "Ongoing":
+			frappe.throw("Only Ongoing contracts can be terminated.")
 		if self.docstatus != 1:
 			frappe.throw("Document must be submitted before it can be terminated.")
 		if not reason or not str(reason).strip():

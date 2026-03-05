@@ -11,7 +11,7 @@ frappe.ui.form.on('Plot Contract', {
 	refresh: function(frm) {
 		const colors = {
 			'Draft': 'gray',
-			'Active': 'blue',
+			'Ongoing': 'yellow',
 			'Completed': 'green',
 			'Cancelled': 'red',
 			'Terminated': 'orange'
@@ -19,7 +19,7 @@ frappe.ui.form.on('Plot Contract', {
 		const color = colors[frm.doc.contract_status] || 'gray';
 		frm.page.set_indicator(frm.doc.contract_status, color);
 
-		if (frm.doc.docstatus === 1 && frm.doc.contract_status === 'Active') {
+		if (frm.doc.docstatus === 1 && frm.doc.contract_status === 'Ongoing') {
 			frm.add_custom_button('Record Payment', function() {
 				let d = new frappe.ui.Dialog({
 					title: 'Record Payment',
@@ -102,11 +102,26 @@ frappe.ui.form.on('Plot Contract', {
 				);
 			}, 'Actions');
 		}
+
+		if (frm.doc.docstatus === 1 && frm.doc.contract_status === 'Completed') {
+			frm.add_custom_button('Create Handover Document', function() {
+				frappe.new_doc('Plot Handover', {
+					contract: frm.doc.name,
+					customer: frm.doc.customer,
+					plot: frm.doc.plot,
+					acquisition_name: frm.doc.acquisition_name,
+					land_acquisition: frm.doc.land_acquisition,
+					contract_date: frm.doc.contract_date,
+					selling_price: frm.doc.selling_price
+				});
+			}, 'Actions');
+		}
 	},
 
 	plot: function(frm) {
 		if (!frm.doc.plot) {
 			frm.set_value('land_acquisition', '');
+			frm.set_value('acquisition_name', '');
 			return;
 		}
 		frappe.db.get_doc('Plot Master', frm.doc.plot)
@@ -119,10 +134,15 @@ frappe.ui.form.on('Plot Contract', {
 					});
 					frm.set_value('plot', '');
 					frm.set_value('land_acquisition', '');
+					frm.set_value('acquisition_name', '');
 					return;
 				}
 				frm.set_value('land_acquisition', plot_doc.land_acquisition);
 				frm.set_value('selling_price', plot_doc.selling_price);
+				frappe.db.get_value('Land Acquisition', plot_doc.land_acquisition, 'acquisition_name')
+					.then(r => {
+						frm.set_value('acquisition_name', r.message.acquisition_name || '');
+					});
 				recalculate_amounts(frm);
 			});
 	},
