@@ -1,12 +1,15 @@
 {
  "charts": [],
- "content": "[{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Land Acquisition\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Master\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Contract\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Handover\",\"col\":3}},{\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"LMS Executive Dashboard\",\"col\":3}},{\"type\":\"spacer\",\"data\":{\"col\":12}},{\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Contracts\",\"col\":4}},{\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}}]",
+ "content": "[{\"id\":\"MTUC3-YCjT\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"AsLgdDMC9U\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Land Acquisition\",\"col\":3}},{\"id\":\"PQXbmho91z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Master\",\"col\":3}},{\"id\":\"6bjswerIf5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Contract\",\"col\":3}},{\"id\":\"lmsjrFvEKN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Handover\",\"col\":3}},{\"id\":\"m9h4iIVZon\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"LMS Executive Dashboard\",\"col\":3}},{\"id\":\"HMu7hQg3qd\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"esbrQIZUB8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"Re4NEB7BM4\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"Ubex7a0LDE\",\"type\":\"card\",\"data\":{\"card_name\":\"Contracts\",\"col\":4}},{\"id\":\"Fa2zvYy3iC\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}}]",
+ "creation": "2026-03-05 15:57:04.259107",
  "custom_blocks": [],
  "docstatus": 0,
  "doctype": "Workspace",
  "for_user": "",
  "hide_custom": 0,
- "icon": "home",
+ "icon": "retail",
+ "idx": 0,
+ "indicator_color": "",
  "is_hidden": 0,
  "label": "Land Management",
  "links": [
@@ -48,6 +51,28 @@
    "label": "LMS Settings",
    "link_count": 0,
    "link_to": "LMS Settings",
+   "link_type": "DocType",
+   "onboard": 0,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Customer",
+   "link_count": 0,
+   "link_to": "Customer",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Land Supplier",
+   "link_count": 0,
+   "link_to": "Supplier",
    "link_type": "DocType",
    "onboard": 0,
    "type": "Link"
@@ -181,7 +206,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-03-05 00:00:00.000000",
+ "modified": "2026-03-05 16:02:25.128525",
  "modified_by": "Administrator",
  "module": "Lms",
  "name": "Land Management",
@@ -222,6 +247,7 @@
    "color": "Purple",
    "label": "LMS Executive Dashboard",
    "link_to": "LMS Executive Dashboard",
+   "report_ref_doctype": "Plot Contract",
    "type": "Report"
   }
  ],
