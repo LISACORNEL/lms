@@ -1,0 +1,203 @@
+{
+ "doctype": "DocType",
+ "name": "TCB API Log",
+ "module": "Lms",
+ "autoname": "naming_series:",
+ "track_changes": 0,
+ "title_field": "external_reference",
+ "search_fields": "external_reference,transaction_id,plot_sales_order,status",
+ "field_order": [
+  "naming_series",
+  "meta_section",
+  "requested_at",
+  "response_at",
+  "direction",
+  "event_type",
+  "status",
+  "processing_mode",
+  "is_duplicate",
+  "endpoint",
+  "http_status_code",
+  "tcb_status_code",
+  "tcb_message",
+  "reference_section",
+  "external_reference",
+  "transaction_id",
+  "plot_sales_order",
+  "plot_contract",
+  "payment_entry",
+  "payload_section",
+  "request_payload",
+  "response_payload",
+  "error"
+ ],
+ "fields": [
+  {
+   "fieldname": "naming_series",
+   "fieldtype": "Select",
+   "label": "Series",
+   "options": "TCB-.YYYY.-.####",
+   "default": "TCB-.YYYY.-.####"
+  },
+  {
+   "fieldname": "meta_section",
+   "fieldtype": "Section Break",
+   "label": "Metadata"
+  },
+  {
+   "fieldname": "requested_at",
+   "fieldtype": "Datetime",
+   "label": "Requested At",
+   "default": "Now",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "response_at",
+   "fieldtype": "Datetime",
+   "label": "Response At",
+   "read_only": 1
+  },
+  {
+   "fieldname": "direction",
+   "fieldtype": "Select",
+   "label": "Direction",
+   "options": "Outbound\nInbound",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "event_type",
+   "fieldtype": "Select",
+   "label": "Event Type",
+   "options": "Reference Create\nIPN Callback\nReconciliation\nReference Decline",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Success\nFailed\nIgnored",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "processing_mode",
+   "fieldtype": "Select",
+   "label": "Processing Mode",
+   "options": "Off\nLog Only\nLive\nApply Payment",
+   "read_only": 1
+  },
+  {
+   "fieldname": "is_duplicate",
+   "fieldtype": "Check",
+   "label": "Is Duplicate",
+   "default": "0",
+   "read_only": 1
+  },
+  {
+   "fieldname": "endpoint",
+   "fieldtype": "Data",
+   "label": "Endpoint",
+   "read_only": 1
+  },
+  {
+   "fieldname": "http_status_code",
+   "fieldtype": "Int",
+   "label": "HTTP Status Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tcb_status_code",
+   "fieldtype": "Int",
+   "label": "TCB Status Code",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tcb_message",
+   "fieldtype": "Data",
+   "label": "TCB Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "reference_section",
+   "fieldtype": "Section Break",
+   "label": "References"
+  },
+  {
+   "fieldname": "external_reference",
+   "fieldtype": "Data",
+   "label": "External Reference",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "transaction_id",
+   "fieldtype": "Data",
+   "label": "Transaction ID",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "plot_sales_order",
+   "fieldtype": "Link",
+   "label": "Plot Sales Order",
+   "options": "Plot Sales Order",
+   "read_only": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "plot_contract",
+   "fieldtype": "Link",
+   "label": "Plot Contract",
+   "options": "Plot Contract",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payment_entry",
+   "fieldtype": "Link",
+   "label": "Payment Entry",
+   "options": "Payment Entry",
+   "read_only": 1
+  },
+  {
+   "fieldname": "payload_section",
+   "fieldtype": "Section Break",
+   "label": "Payloads"
+  },
+  {
+   "fieldname": "request_payload",
+   "fieldtype": "Long Text",
+   "label": "Request Payload",
+   "read_only": 1
+  },
+  {
+   "fieldname": "response_payload",
+   "fieldtype": "Long Text",
+   "label": "Response Payload",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error",
+   "fieldtype": "Long Text",
+   "label": "Error",
+   "read_only": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "Administrator",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Finance",
+   "read": 1
+  }
+ ],
+ "sort_field": "creation",
+ "sort_order": "DESC"
+}

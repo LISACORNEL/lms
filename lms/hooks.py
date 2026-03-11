@@ -153,6 +153,9 @@ after_migrate = ["lms.migrate.reload_lms_doctypes"]
 # ---------------
 
 scheduler_events = {
+	"hourly": [
+		"lms.tasks.hourly"
+	],
 	"daily": [
 		"lms.tasks.daily"
 	],
@@ -238,4 +241,3 @@ scheduler_events = {
 # ------------
 # List of apps whose translatable strings should be excluded from this app's translations.
 # ignore_translatable_strings_from = []
-

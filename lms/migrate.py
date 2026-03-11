@@ -3,6 +3,8 @@ import frappe
 
 LMS_DOCTYPES = [
 	("lms", "doctype", "lms_settings"),
+	("lms", "doctype", "tcb_integration_settings"),
+	("lms", "doctype", "tcb_api_log"),
 	("lms", "doctype", "land_acquisition_cost_item"),
 	("lms", "doctype", "land_acquisition"),
 	("lms", "doctype", "plot_master"),

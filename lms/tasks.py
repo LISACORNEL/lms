@@ -2,6 +2,21 @@ import frappe
 from frappe.utils import today, getdate, flt, add_days
 
 
+def hourly():
+    """Entry point for LMS hourly scheduled jobs."""
+    jobs = [
+        ("auto_reconcile_tcb_payments", auto_reconcile_tcb_payments),
+    ]
+    for job_name, job_fn in jobs:
+        try:
+            job_fn()
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"LMS hourly: {job_name} failed",
+            )
+
+
 def daily():
     """Entry point for all LMS daily scheduled jobs.
 
@@ -550,3 +565,17 @@ def auto_sync_stale_payment_statuses():
 
     if affected_contracts or affected_sales_orders:
         frappe.db.commit()
+
+
+def auto_reconcile_tcb_payments():
+    """Pull TCB reconciliation records and optionally auto-apply missing payments."""
+    from lms.lms.tcb import run_tcb_reconciliation_job
+
+    result = run_tcb_reconciliation_job()
+    status = result.get("status") or ("Success" if result.get("ok") else "Failed")
+    message = result.get("message") or "No message returned."
+
+    if status == "Failed":
+        frappe.log_error(message=message, title="LMS: TCB reconciliation failed")
+    else:
+        frappe.logger("lms").info(f"TCB reconciliation: {message}")

@@ -4,7 +4,12 @@ from frappe.utils import flt, add_days, today, getdate, cint
 
 from lms.lms.doctype.land_acquisition.land_acquisition import sync_land_acquisition_plot_summary
 from lms.lms.doctype.plot_master.plot_master import PLOT_TYPE_TO_ITEM
-from lms.lms.tcb import generate_control_number, confirm_payment
+from lms.lms.tcb import (
+	generate_control_number,
+	confirm_payment,
+	register_reference_for_sales_order,
+	decline_reference_for_sales_order,
+)
 
 
 class PlotSalesOrder(Document):
@@ -252,16 +257,22 @@ class PlotSalesOrder(Document):
 		self.db_set("status", "Open")
 		self._link_plot_application()
 
-		# Generate ONE control number for this Sales Order — used for all payments
+		# Generate one partner reference for this Sales Order and register it with TCB
 		control_no = generate_control_number(self.name)
 		self.db_set("control_number", control_no)
+		registration = register_reference_for_sales_order(self.name, control_no)
+		if not registration.get("ok"):
+			frappe.throw(registration.get("message") or "TCB reference registration failed.")
 
 		# Keep SI creation tied to confirmed payments.
 		# On submit we only prepare the draft contract/schedule.
 		contract_name = self._ensure_draft_contract()
+		mode = registration.get("mode") or "Off"
+		registration_note = registration.get("message") or ""
 
 		frappe.msgprint(
 			f"Sales Order submitted. TCB Control Number: <b>{control_no}</b>. "
+			f"Reference registration mode: <b>{mode}</b>. {registration_note} "
 			f"Draft contract <b>{contract_name}</b> prepared. "
 			"Customer can use this number to make payments at TCB bank.",
 			indicator="blue",
@@ -277,14 +288,36 @@ class PlotSalesOrder(Document):
 					f"Cannot cancel Sales Order {self.name} because linked contract "
 					f"{contract.name} is already submitted. Terminate/cancel the contract first."
 				)
-			frappe.delete_doc("Plot Contract", contract.name, ignore_permissions=True)
-			self.db_set("plot_contract", "")
+				frappe.delete_doc("Plot Contract", contract.name, ignore_permissions=True)
+				self.db_set("plot_contract", "")
 
+		self._decline_tcb_reference_if_required()
 		self._unlink_plot_application()
 		frappe.db.set_value("Plot Master", self.plot, "status", "Available")
 		self._sync_land_acquisition_summary()
 		self.db_set("status", "Cancelled")
 		self._cancel_sales_invoices()
+
+	def _decline_tcb_reference_if_required(self):
+		"""Decline registered control number at TCB when an unpaid SO is cancelled."""
+		if not self.control_number:
+			return
+		if self._has_any_payment_received():
+			return
+
+		result = decline_reference_for_sales_order(
+			sales_order_name=self.name,
+			control_number=self.control_number,
+		)
+		if result.get("block_cancel"):
+			frappe.throw(result.get("message") or "TCB decline failed and policy blocks cancellation.")
+		if not result.get("ok") and result.get("message"):
+			frappe.msgprint(
+				f"Warning: Sales Order cancelled locally, but TCB reference decline failed. "
+				f"Reason: {result.get('message')}",
+				indicator="orange",
+				alert=True,
+			)
 
 	def _link_plot_application(self):
 		"""Bind this submitted SO to its source Plot Application."""
@@ -535,7 +568,7 @@ class PlotSalesOrder(Document):
 	# ------------------------------------------------------------------ #
 
 	@frappe.whitelist()
-	def receive_payment(self, amount, payment_date, bank_account, reference_no=None):
+	def receive_payment(self, amount, payment_date, bank_account, reference_no=None, skip_tcb_confirmation=0):
 		"""TCB payment confirmation handler.
 
 		Called when TCB bank confirms a payment has been received
@@ -565,19 +598,26 @@ class PlotSalesOrder(Document):
 			frappe.throw(f"Cannot record payment when Sales Order status is '{self.status}'.")
 		if not self.control_number:
 			frappe.throw("Control number is missing on this Sales Order.")
+		skip_tcb_confirmation = cint(skip_tcb_confirmation)
 
-		# Confirm with TCB (dummy — always returns True)
+		# Confirm with TCB (or skip when payment is already confirmed by callback/reconciliation)
 		settings = frappe.get_single("LMS Settings")
 		self._validate_bank_account(bank_account, settings.company)
 		self._check_duplicate_reference(reference_no)
-		tcb_response = confirm_payment(
-			control_number=self.control_number,
-			amount=amount,
-			payment_date=payment_date,
-			reference_no=reference_no,
-		)
-		if not tcb_response.get("confirmed"):
-			frappe.throw("TCB payment confirmation failed. Please try again.")
+		if skip_tcb_confirmation:
+			tcb_response = {
+				"confirmed": True,
+				"reference": reference_no or self.control_number,
+			}
+		else:
+			tcb_response = confirm_payment(
+				control_number=self.control_number,
+				amount=amount,
+				payment_date=payment_date,
+				reference_no=reference_no,
+			)
+			if not tcb_response.get("confirmed"):
+				frappe.throw("TCB payment confirmation failed. Please try again.")
 
 		self.reload()
 
