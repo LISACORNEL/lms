@@ -1,22 +1,27 @@
 {
- "actions": [],
- "autoname": "naming_series:",
- "creation": "2026-03-05 11:00:45.385690",
  "doctype": "DocType",
- "engine": "InnoDB",
+ "name": "Plot Sales Order",
+ "module": "Lms",
+ "autoname": "naming_series:",
+ "is_submittable": 1,
+ "track_changes": 1,
+ "title_field": "customer",
+ "search_fields": "customer,plot,control_number,status",
  "field_order": [
   "naming_series",
-  "contract_section",
+  "order_section",
   "customer",
+  "plot_application",
   "plot",
   "acquisition_name",
   "land_acquisition",
-  "contract_date",
+  "order_date",
   "col_break_1",
-  "contract_status",
+  "status",
   "payment_completion_days",
   "payment_deadline",
-  "sales_order",
+  "control_number",
+  "plot_contract",
   "financials_section",
   "selling_price",
   "booking_fee_percent",
@@ -24,7 +29,6 @@
   "col_break_2",
   "booking_fee_amount",
   "balance_due",
-  "booking_fee_invoice",
   "payment_schedule_section",
   "payment_schedule",
   "payment_summary_section",
@@ -33,11 +37,8 @@
   "col_break_3",
   "total_outstanding",
   "government_fee_withheld",
-  "government_fee_entry",
-  "forfeiture_entry",
   "notes_section",
   "notes",
-  "termination_reason",
   "amended_from"
  ],
  "fields": [
@@ -45,81 +46,104 @@
    "fieldname": "naming_series",
    "fieldtype": "Select",
    "label": "Series",
-   "options": "CTR-.YYYY.-.####"
+   "options": "PSO-.YYYY.-.####"
   },
   {
-   "fieldname": "contract_section",
+   "fieldname": "order_section",
    "fieldtype": "Section Break",
-   "label": "Contract and Land Acquisition Details "
+   "label": "Sales Order Details"
   },
   {
    "fieldname": "customer",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Customer",
    "options": "Customer",
-   "reqd": 1
+   "reqd": 1,
+   "in_list_view": 1
   },
   {
-   "description": "Only Available plots can be selected",
    "fieldname": "plot",
    "fieldtype": "Link",
-   "in_list_view": 1,
    "label": "Plot",
    "options": "Plot Master",
-   "reqd": 1
+   "reqd": 1,
+   "in_list_view": 1,
+   "description": "Available/Reserved plot. Auto-filled when Plot Application is selected."
   },
   {
-   "description": "Auto-filled from the selected plot",
+   "fieldname": "acquisition_name",
+   "fieldtype": "Data",
+   "label": "Acquisition Name",
+   "read_only": 1,
+   "description": "Auto-filled from the Land Acquisition"
+  },
+  {
    "fieldname": "land_acquisition",
    "fieldtype": "Link",
    "label": "Land Acquisition",
    "options": "Land Acquisition",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Auto-filled from the selected plot"
   },
   {
-   "fieldname": "contract_date",
+   "fieldname": "order_date",
    "fieldtype": "Date",
-   "in_list_view": 1,
-   "label": "Contract Date",
-   "reqd": 1
+   "label": "Order Date",
+   "reqd": 1,
+   "in_list_view": 1
   },
   {
    "fieldname": "col_break_1",
    "fieldtype": "Column Break"
   },
   {
-   "default": "Draft",
-   "fieldname": "contract_status",
+   "fieldname": "status",
    "fieldtype": "Select",
-   "in_standard_filter": 1,
-   "label": "Contract Status",
-   "options": "Draft\nOngoing\nCompleted\nCancelled\nTerminated",
-   "read_only": 1
+   "label": "Status",
+   "options": "Draft\nOpen\nConverted\nCancelled",
+   "default": "Draft",
+   "read_only": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
   },
   {
-   "default": "90",
-   "description": "Number of days from contract date the customer has to complete full payment",
    "fieldname": "payment_completion_days",
    "fieldtype": "Int",
-   "in_list_view": 1,
    "label": "Payment Completion Days",
-   "reqd": 1
+   "reqd": 1,
+   "default": "90",
+   "in_list_view": 1,
+   "description": "Number of days from order date the customer has to complete full payment"
   },
   {
-   "description": "Auto-filled from contract date + payment completion days",
    "fieldname": "payment_deadline",
    "fieldtype": "Date",
    "label": "Payment Deadline",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Auto-filled from order date + payment completion days"
   },
   {
-   "fieldname": "sales_order",
-   "fieldtype": "Link",
-   "label": "Plot Sales Order",
-   "options": "Plot Sales Order",
+   "fieldname": "control_number",
+   "fieldtype": "Data",
+   "label": "TCB Control Number",
    "read_only": 1,
-   "description": "Linked Sales Order — auto-set when contract is created from a Plot Sales Order"
+   "description": "Generated on submission \u2014 customer uses this at TCB bank to make payments",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "plot_contract",
+   "fieldtype": "Link",
+   "label": "Plot Contract",
+   "options": "Plot Contract",
+   "read_only": 1,
+   "description": "Auto-created when first payment is confirmed"
+  },
+  {
+   "fieldname": "plot_application",
+   "fieldtype": "Link",
+   "label": "Plot Application",
+   "options": "Plot Application",
+   "description": "Select a submitted Paid Plot Application. SO fields auto-fill from it (except Booking/Government %)."
   },
   {
    "fieldname": "financials_section",
@@ -127,25 +151,25 @@
    "label": "Financials"
   },
   {
-   "description": "Auto-filled from Plot Master",
    "fieldname": "selling_price",
    "fieldtype": "Float",
    "label": "Selling Price (TZS)",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Auto-filled from Plot Master"
   },
   {
-   "description": "Percentage of selling price required as booking fee for this contract",
    "fieldname": "booking_fee_percent",
    "fieldtype": "Percent",
    "label": "Booking Fee %",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Percentage of selling price required as booking fee"
   },
   {
-   "description": "Government fee percentage for this contract \u2014 deducted at full payment completion",
    "fieldname": "government_share_percent",
    "fieldtype": "Percent",
    "label": "Government Share %",
-   "reqd": 1
+   "reqd": 1,
+   "description": "Government fee percentage \u2014 posted only at full payment completion"
   },
   {
    "fieldname": "col_break_2",
@@ -161,14 +185,6 @@
    "fieldname": "balance_due",
    "fieldtype": "Float",
    "label": "Balance Due (TZS)",
-   "read_only": 1
-  },
-  {
-   "description": "Auto-created on contract submission",
-   "fieldname": "booking_fee_invoice",
-   "fieldtype": "Link",
-   "label": "Booking Fee Invoice",
-   "options": "Sales Invoice",
    "read_only": 1
   },
   {
@@ -210,27 +226,11 @@
    "read_only": 1
   },
   {
-   "description": "Selling price \u00d7 government share % \u2014 collected at full payment completion",
    "fieldname": "government_fee_withheld",
    "fieldtype": "Float",
    "label": "Expected Government Fee (TZS)",
-   "read_only": 1
-  },
-  {
-   "description": "Auto-created when contract is fully paid",
-   "fieldname": "government_fee_entry",
-   "fieldtype": "Link",
-   "label": "Government Fee Journal Entry",
-   "options": "Journal Entry",
-   "read_only": 1
-  },
-  {
-   "description": "Auto-created when contract is terminated; all funds paid by customer are forfeited (no refund)",
-   "fieldname": "forfeiture_entry",
-   "fieldtype": "Link",
-   "label": "Forfeiture Journal Entry",
-   "options": "Journal Entry",
-   "read_only": 1
+   "read_only": 1,
+   "description": "Selling price \u00d7 government share % \u2014 posted only at full payment completion"
   },
   {
    "fieldname": "notes_section",
@@ -243,66 +243,41 @@
    "label": "Notes"
   },
   {
-   "description": "Reason recorded when contract was terminated due to non-payment or other cause",
-   "fieldname": "termination_reason",
-   "fieldtype": "Long Text",
-   "label": "Termination Reason",
-   "read_only": 1
-  },
-  {
    "fieldname": "amended_from",
    "fieldtype": "Link",
    "label": "Amended From",
-   "options": "Plot Contract",
-   "print_hide": 1,
-   "read_only": 1
-  },
-  {
-   "fieldname": "acquisition_name",
-   "fieldtype": "Data",
-   "label": "Acquisition Name",
+   "options": "Plot Sales Order",
    "read_only": 1,
-   "description": "Auto-filled from the Land Acquisition e.g. The Ubungo Project"
+   "print_hide": 1
   }
  ],
- "is_submittable": 1,
- "links": [],
- "modified": "2026-03-05 11:29:13.260283",
- "modified_by": "Administrator",
- "module": "Lms",
- "name": "Plot Contract",
- "naming_rule": "By \"Naming Series\" field",
- "owner": "Administrator",
  "permissions": [
   {
-   "amend": 1,
-   "cancel": 1,
+   "role": "Administrator",
+   "read": 1,
+   "write": 1,
    "create": 1,
    "delete": 1,
-   "read": 1,
-   "role": "Administrator",
    "submit": 1,
-   "write": 1
+   "cancel": 1,
+   "amend": 1
   },
   {
-   "create": 1,
-   "read": 1,
    "role": "Sales",
-   "submit": 1,
-   "write": 1
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "submit": 1
   },
   {
-   "read": 1,
-   "role": "Finance"
+   "role": "Finance",
+   "read": 1
   },
   {
-   "read": 1,
-   "role": "Auditor"
+   "role": "Auditor",
+   "read": 1
   }
  ],
- "row_format": "Dynamic",
- "sort_field": "modified",
- "sort_order": "DESC",
  "states": [
   {
    "color": "Grey",
@@ -310,20 +285,19 @@
   },
   {
    "color": "Yellow",
-   "title": "Ongoing"
+   "title": "Open"
   },
   {
    "color": "Green",
-   "title": "Completed"
+   "title": "Converted"
   },
   {
    "color": "Red",
    "title": "Cancelled"
-  },
-  {
-   "color": "Orange",
-   "title": "Terminated"
   }
  ],
- "track_changes": 1
+ "naming_rule": "By \"Naming Series\" field",
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC"
 }

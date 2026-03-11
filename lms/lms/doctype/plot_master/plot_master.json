@@ -27,6 +27,14 @@
    "description": "Must be an Approved Land Acquisition"
   },
   {
+   "fieldname": "acquisition_name",
+   "fieldtype": "Data",
+   "label": "Acquisition Name",
+   "read_only": 1,
+   "fetch_from": "land_acquisition.acquisition_name",
+   "description": "Auto-filled from selected Land Acquisition"
+  },
+  {
    "fieldname": "plot_number",
    "fieldtype": "Data",
    "label": "Plot Number",

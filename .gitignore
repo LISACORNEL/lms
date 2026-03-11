@@ -32,6 +32,7 @@ logs/
 
 # LMS local utilities
 lms/lms/cleanup.py
+lms/lms/tcb.py
 
 # Env / editor
 .env

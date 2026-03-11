@@ -1,6 +1,6 @@
 {
  "charts": [],
- "content": "[{\"id\":\"intro-lms01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"text-muted\\\">Create your first land supplier and customer — begin your journey on the Land Management System.</span>\",\"col\":12}},{\"id\":\"MTUC3-YCjT\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"AsLgdDMC9U\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Land Acquisition\",\"col\":3}},{\"id\":\"PQXbmho91z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Master\",\"col\":3}},{\"id\":\"6bjswerIf5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Contract\",\"col\":3}},{\"id\":\"lmsjrFvEKN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Handover\",\"col\":3}},{\"id\":\"m9h4iIVZon\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"LMS Executive Dashboard\",\"col\":3}},{\"id\":\"HMu7hQg3qd\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"esbrQIZUB8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"Re4NEB7BM4\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"Ubex7a0LDE\",\"type\":\"card\",\"data\":{\"card_name\":\"Contracts\",\"col\":4}},{\"id\":\"Fa2zvYy3iC\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}}]",
+ "content": "[{\"id\":\"intro-lms01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"text-muted\\\">Create your first land supplier and customer — begin your journey on the Land Management System.</span>\",\"col\":12}},{\"id\":\"MTUC3-YCjT\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"AsLgdDMC9U\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Land Acquisition\",\"col\":3}},{\"id\":\"PQXbmho91z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Master\",\"col\":3}},{\"id\":\"sc-plotapp01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Application\",\"col\":3}},{\"id\":\"sc-plotso01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Sales Order\",\"col\":3}},{\"id\":\"6bjswerIf5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Contract\",\"col\":3}},{\"id\":\"lmsjrFvEKN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Handover\",\"col\":3}},{\"id\":\"m9h4iIVZon\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"LMS Executive Dashboard\",\"col\":3}},{\"id\":\"HMu7hQg3qd\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"esbrQIZUB8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"Re4NEB7BM4\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"Ubex7a0LDE\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales & Contracts\",\"col\":4}},{\"id\":\"Fa2zvYy3iC\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}}]",
  "creation": "2026-03-05 15:57:04.259107",
  "custom_blocks": [],
  "docstatus": 0,
@@ -11,7 +11,7 @@
  "idx": 0,
  "indicator_color": "",
  "is_hidden": 0,
- "label": "Land Management",
+ "label": "Land Management System",
  "links": [
   {
    "hidden": 0,
@@ -81,10 +81,32 @@
    "hidden": 0,
    "icon": "file",
    "is_query_report": 0,
-   "label": "Contracts",
+   "label": "Sales & Contracts",
    "link_count": 0,
    "onboard": 0,
    "type": "Card Break"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plot Application",
+   "link_count": 0,
+   "link_to": "Plot Application",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
+  },
+  {
+   "dependencies": "",
+   "hidden": 0,
+   "is_query_report": 0,
+   "label": "Plot Sales Order",
+   "link_count": 0,
+   "link_to": "Plot Sales Order",
+   "link_type": "DocType",
+   "onboard": 1,
+   "type": "Link"
   },
   {
    "dependencies": "",
@@ -206,7 +228,7 @@
    "type": "Link"
   }
  ],
- "modified": "2026-03-05 20:00:00.000000",
+ "modified": "2026-03-10 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Lms",
  "name": "Land Management",
@@ -229,6 +251,18 @@
    "color": "Green",
    "label": "Plot Master",
    "link_to": "Plot Master",
+   "type": "DocType"
+  },
+  {
+   "color": "Cyan",
+   "label": "Plot Application",
+   "link_to": "Plot Application",
+   "type": "DocType"
+  },
+  {
+   "color": "Pink",
+   "label": "Plot Sales Order",
+   "link_to": "Plot Sales Order",
    "type": "DocType"
   },
   {

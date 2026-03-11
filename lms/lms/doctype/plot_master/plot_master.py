@@ -2,6 +2,7 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
 
+from lms.lms.doctype.land_acquisition.land_acquisition import sync_land_acquisition_plot_summary
 
 PLOT_TYPE_TO_ITEM = {
 	"Residential": "RESIDENTIAL PLOTS",
@@ -14,18 +15,27 @@ class PlotMaster(Document):
 
 	def validate(self):
 		self.validate_land_acquisition()
+		self.fill_acquisition_name()
 		self.fill_allocated_cost()
 		self.validate_duplicate_plot_number()
 		self.validate_selling_price()
+
+	def fill_acquisition_name(self):
+		if not self.land_acquisition:
+			self.acquisition_name = ""
+			return
+		self.acquisition_name = frappe.db.get_value(
+			"Land Acquisition", self.land_acquisition, "acquisition_name"
+		) or ""
 
 	def validate_land_acquisition(self):
 		if not self.land_acquisition:
 			return
 		status = frappe.db.get_value("Land Acquisition", self.land_acquisition, "status")
-		if status != "Approved":
+		if status not in ("Approved", "Subdivided"):
 			frappe.throw(
-				f"Land Acquisition {self.land_acquisition} is not Approved (current status: {status}). "
-				"Only plots from Approved Land Acquisitions can be created."
+				f"Land Acquisition {self.land_acquisition} is not ready for subdivision "
+				f"(current status: {status}). Only Approved/Subdivided acquisitions can be used."
 			)
 
 	def fill_allocated_cost(self):
@@ -74,9 +84,11 @@ class PlotMaster(Document):
 
 	def on_submit(self):
 		self.create_stock_entry()
+		sync_land_acquisition_plot_summary(self.land_acquisition)
 
 	def on_cancel(self):
 		self.cancel_stock_entry()
+		sync_land_acquisition_plot_summary(self.land_acquisition)
 
 	def create_stock_entry(self):
 		settings = frappe.get_single("LMS Settings")

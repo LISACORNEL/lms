@@ -1,14 +1,14 @@
 app_name = "lms"
-app_title = "Lms"
-app_publisher = "Basilisa"
-app_description = "Land MAnagement system"
+app_title = "LMS"
+app_publisher = "Aakvatech"
+app_description = "Land Management System"
 app_email = "info@aakvatech.co.tz"
 app_license = "mit"
 
 # Apps
 # ------------------
 
-# required_apps = []
+required_apps = ["erpnext"]
 
 # Each item in the list will be shown as an app in the apps page
 # add_to_apps_screen = [

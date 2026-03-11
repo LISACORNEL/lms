@@ -1,5 +1,15 @@
 frappe.ui.form.on('Plot Master', {
 
+	setup: function(frm) {
+		frm.set_query('land_acquisition', function() {
+			return {
+				filters: {
+					status: ['in', ['Approved', 'Subdivided']]
+				}
+			};
+		});
+	},
+
 	refresh: function(frm) {
 		// Color the status indicator
 		const colors = {
@@ -14,26 +24,31 @@ frappe.ui.form.on('Plot Master', {
 
 	land_acquisition: function(frm) {
 		// When a Land Acquisition is selected, fill the allocated cost
-		if (!frm.doc.land_acquisition) return;
+		if (!frm.doc.land_acquisition) {
+			frm.set_value('acquisition_name', '');
+			return;
+		}
 
-		frappe.db.get_doc('Land Acquisition', frm.doc.land_acquisition)
-			.then(doc => {
-				if (doc.status !== 'Approved') {
-					frappe.msgprint({
-						title: 'Invalid Selection',
-						message: `Land Acquisition ${frm.doc.land_acquisition} is not Approved (status: ${doc.status}). Select an Approved Land Acquisition.`,
-						indicator: 'red'
+				frappe.db.get_doc('Land Acquisition', frm.doc.land_acquisition)
+					.then(doc => {
+						if (!['Approved', 'Subdivided'].includes(doc.status)) {
+						frappe.msgprint({
+							title: 'Invalid Selection',
+							message: `Land Acquisition ${frm.doc.land_acquisition} must be Approved or Subdivided (status: ${doc.status}).`,
+							indicator: 'red'
+							});
+							frm.set_value('land_acquisition', '');
+							frm.set_value('acquisition_name', '');
+							return;
+					}
+					frm.set_value('acquisition_name', doc.acquisition_name || '');
+					// Cost will be calculated server-side based on plot_size_sqm
+					// Just show a message to fill in the plot size
+					frappe.show_alert({
+						message: `Land Acquisition selected: ${doc.name} - ${doc.acquisition_name || ''}. Enter the plot size to calculate allocated cost.`,
+						indicator: 'blue'
 					});
-					frm.set_value('land_acquisition', '');
-					return;
-				}
-				// Cost will be calculated server-side based on plot_size_sqm
-				// Just show a message to fill in the plot size
-				frappe.show_alert({
-					message: 'Land Acquisition selected. Enter the plot size to calculate allocated cost.',
-					indicator: 'blue'
 				});
-			});
 	},
 
 	plot_size_sqm: function(frm) {

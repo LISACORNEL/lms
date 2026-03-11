@@ -1,7 +1,8 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import flt, add_days, today, getdate
+from frappe.utils import flt, add_days, today, getdate, cint
 
+from lms.lms.doctype.land_acquisition.land_acquisition import sync_land_acquisition_plot_summary
 from lms.lms.doctype.plot_master.plot_master import PLOT_TYPE_TO_ITEM
 
 
@@ -18,8 +19,24 @@ class PlotContract(Document):
 		self.generate_payment_schedule()
 		self.calculate_payment_summary()
 
+	def before_submit(self):
+		self._validate_sales_order_first_payment_gate()
+
+	def before_cancel(self):
+		# Cancel is only allowed for contracts with no confirmed payment.
+		# If any payment exists, use terminate_contract() so forfeiture accounting is posted.
+		if flt(self.total_paid) > 0:
+			frappe.throw(
+				f"Contract {self.name} has received payments (TZS {flt(self.total_paid):,.0f}). "
+				"Use Terminate Contract instead of Cancel."
+			)
+
 	def validate_plot_available(self):
 		if not self.plot:
+			return
+		# Skip check when contract is auto-created from a Plot Sales Order —
+		# the SO already validated and reserved the plot.
+		if self.sales_order or self.flags.get("from_sales_order"):
 			return
 		if not frappe.db.exists("Plot Contract", self.name):
 			plot_status = frappe.db.get_value("Plot Master", self.plot, "status")
@@ -34,10 +51,64 @@ class PlotContract(Document):
 				"contract_status": ["in", ["Ongoing", "Completed"]],
 			})
 			if active:
-				frappe.throw(
-					f"Plot {self.plot} already has an active contract ({active}). "
-					"The existing contract must be terminated or completed first."
-				)
+					frappe.throw(
+						f"Plot {self.plot} already has an active contract ({active}). "
+						"The existing contract must be terminated or completed first."
+					)
+
+	def _sales_order_has_any_confirmed_payment(self, so_doc):
+		"""True when any linked SO installment SI has been partially/fully paid."""
+		if flt(so_doc.total_paid) > 0:
+			return True
+
+		so_rows = frappe.db.get_all(
+			"Plot Contract Payment",
+			filters={
+				"parenttype": "Plot Sales Order",
+				"parent": so_doc.name,
+				"sales_invoice": ["!=", ""],
+			},
+			fields=["sales_invoice", "expected_amount"],
+		)
+		for row in so_rows:
+			si = frappe.db.get_value(
+				"Sales Invoice",
+				row.sales_invoice,
+				["docstatus", "outstanding_amount"],
+				as_dict=True,
+			)
+			if not si or si.docstatus != 1:
+				continue
+			if flt(si.outstanding_amount) < flt(row.expected_amount):
+				return True
+		return False
+
+	def _validate_sales_order_first_payment_gate(self):
+		"""Contracts linked to SO can only be activated after first SO payment."""
+		if not self.sales_order:
+			return
+
+		if not frappe.db.exists("Plot Sales Order", self.sales_order):
+			frappe.throw(f"Linked Plot Sales Order {self.sales_order} was not found.")
+
+		so_doc = frappe.get_doc("Plot Sales Order", self.sales_order)
+		if so_doc.docstatus != 1:
+			frappe.throw(
+				f"Linked Plot Sales Order {so_doc.name} is not submitted. "
+				"Submit the Sales Order first."
+			)
+
+		if so_doc.plot != self.plot or so_doc.customer != self.customer:
+			frappe.throw(
+				f"Contract {self.name} does not match linked Sales Order {so_doc.name} "
+				"(plot/customer mismatch)."
+			)
+
+		if not self._sales_order_has_any_confirmed_payment(so_doc):
+			frappe.throw(
+				f"Cannot submit contract {self.name} before first payment on Sales Order "
+				f"{so_doc.name}. Record payment on the Sales Order first."
+			)
 
 	def fill_selling_price(self):
 		if self.plot:
@@ -64,8 +135,20 @@ class PlotContract(Document):
 	def generate_payment_schedule(self):
 		"""Rebuild schedule rows from contract parameters.
 		Only runs while the document is still in Draft — once submitted,
-		rows are managed by sync_payment_status() after each payment."""
+		rows are managed by sync_payment_status() after each payment.
+
+		Skipped when contract is auto-created from a Plot Sales Order —
+		the schedule (with SI links) is copied directly from the SO.
+
+		Schedule:
+		  Row 1 — Booking fee, due on contract date
+		  Row 2 — Remaining balance, due on contract date + payment_completion_days
+		"""
 		if self.docstatus == 1:
+			return
+		# Skip regeneration if this contract comes from a Sales Order —
+		# the payment schedule with SI links is already set.
+		if self.sales_order or self.flags.get("from_sales_order"):
 			return
 		if not flt(self.selling_price) or not flt(self.booking_fee_percent):
 			return
@@ -89,34 +172,15 @@ class PlotContract(Document):
 			"status": "Pending",
 		})
 
+		# Row 2 — remaining balance, due on contract date + total days
 		if balance > 0:
-			# Build due-day offsets: monthly steps up to (not including) total_days,
-			# then always end exactly on total_days.
-			# e.g. 50 days → [30, 50]   90 days → [30, 60, 90]   45 days → [30, 45]
-			due_day_offsets = []
-			d = 30
-			while d < total_days:
-				due_day_offsets.append(d)
-				d += 30
-			due_day_offsets.append(total_days)
-
-			num_installments = len(due_day_offsets)
-			per_installment = int(balance / num_installments)
-
-			for i, offset in enumerate(due_day_offsets):
-				is_last = (i == num_installments - 1)
-				amount = (
-					balance - (per_installment * (num_installments - 1))
-					if is_last
-					else flt(per_installment)
-				)
-				self.append("payment_schedule", {
-					"installment_number": i + 2,
-					"due_date": add_days(self.contract_date, offset),
-					"expected_amount": amount,
-					"paid_amount": 0,
-					"status": "Pending",
-				})
+			self.append("payment_schedule", {
+				"installment_number": 2,
+				"due_date": add_days(self.contract_date, total_days),
+				"expected_amount": balance,
+				"paid_amount": 0,
+				"status": "Pending",
+			})
 
 	def calculate_payment_summary(self):
 		self.total_contract_value = flt(self.selling_price)
@@ -134,46 +198,62 @@ class PlotContract(Document):
 
 	def on_submit(self):
 		frappe.db.set_value("Plot Master", self.plot, "status", "Reserved")
+		self._sync_land_acquisition_summary()
 		self.db_set("contract_status", "Ongoing")
-		self._create_sales_invoices()
+		# Keep SI creation tied to confirmed payments (record_payment).
 
 	def on_cancel(self):
 		frappe.db.set_value("Plot Master", self.plot, "status", "Available")
+		self._sync_land_acquisition_summary()
 		self.db_set("contract_status", "Cancelled")
 		self._cancel_sales_invoices()
+
+	def _sync_land_acquisition_summary(self):
+		land_acquisition = self.land_acquisition or frappe.db.get_value(
+			"Plot Master", self.plot, "land_acquisition"
+		)
+		if land_acquisition:
+			sync_land_acquisition_plot_summary(land_acquisition)
 
 	# ------------------------------------------------------------------ #
 	#  Sales Invoice helpers                                               #
 	# ------------------------------------------------------------------ #
 
-	def _create_sales_invoices(self):
-		settings = frappe.get_single("LMS Settings")
+	def _ensure_row_sales_invoice(self, row, settings):
+		"""Create and link SI for a payment row if missing; return SI name."""
+		if row.sales_invoice:
+			return row.sales_invoice
+
 		plot_type = frappe.db.get_value("Plot Master", self.plot, "plot_type")
 		item_code = PLOT_TYPE_TO_ITEM.get(plot_type)
-
 		if not item_code:
 			frappe.throw(f"No item mapped for plot type '{plot_type}'.")
-		if not self.payment_schedule:
-			frappe.throw("Payment schedule is empty — cannot create invoices.")
 
-		for idx, row in enumerate(self.payment_schedule):
-			is_booking = (idx == 0)
-			label = (
-				f"Booking Fee — Plot {self.plot} ({self.name})"
-				if is_booking
-				else f"Installment {row.installment_number} — Plot {self.plot} ({self.name})"
-			)
-			si_name = self._make_sales_invoice(
-				item_code=item_code,
-				amount=flt(row.expected_amount),
-				due_date=row.due_date,
-				description=label,
-				settings=settings,
-				submit=is_booking,   # booking fee SI submitted immediately; installments stay Draft
-			)
-			frappe.db.set_value("Plot Contract Payment", row.name, "sales_invoice", si_name)
-			if is_booking:
-				self.db_set("booking_fee_invoice", si_name)
+		description = (
+			f"Booking Fee — Plot {self.plot} ({self.name})"
+			if cint(row.installment_number or 0) == 1
+			else f"Installment {row.installment_number} — Plot {self.plot} ({self.name})"
+		)
+
+		si_name = self._make_sales_invoice(
+			item_code=item_code,
+			amount=flt(row.expected_amount),
+			due_date=row.due_date,
+			description=description,
+			settings=settings,
+			submit=True,
+		)
+		frappe.db.set_value("Plot Contract Payment", row.name, "sales_invoice", si_name)
+		row.sales_invoice = si_name
+
+		if cint(row.installment_number or 0) == 1:
+			self.db_set("booking_fee_invoice", si_name)
+
+		frappe.logger("lms").info(
+			f"Created SI {si_name} for contract {self.name} "
+			f"(installment #{row.installment_number}) after payment confirmation"
+		)
+		return si_name
 
 	def _make_sales_invoice(self, item_code, amount, due_date, description, settings, submit=True):
 		si = frappe.get_doc({
@@ -228,6 +308,58 @@ class PlotContract(Document):
 			elif si_doc.docstatus == 1:
 				if flt(si_doc.outstanding_amount) > 0:
 					si_doc.cancel()
+
+	def _validate_bank_account(self, bank_account, company):
+		account_info = frappe.db.get_value(
+			"Account",
+			bank_account,
+			["name", "company", "account_type", "is_group"],
+			as_dict=True,
+		)
+		if not account_info:
+			frappe.throw(f"Bank account {bank_account} was not found.")
+		if cint(account_info.is_group):
+			frappe.throw(f"{bank_account} is a group account. Please choose a posting bank account.")
+		if account_info.account_type != "Bank":
+			frappe.throw(f"{bank_account} is not a Bank account.")
+		if account_info.company and account_info.company != company:
+			frappe.throw(
+				f"Bank account {bank_account} belongs to company {account_info.company}, "
+				f"not {company}."
+			)
+
+	def _check_duplicate_reference(self, reference_no):
+		if not reference_no:
+			return
+		existing = frappe.db.sql(
+			"""
+			select pe.name
+			from `tabPayment Entry` pe
+			inner join `tabPayment Entry Reference` per
+				on per.parent = pe.name
+			inner join `tabPlot Contract Payment` pcp
+				on pcp.sales_invoice = per.reference_name
+			where pe.docstatus = 1
+			  and pe.reference_no = %s
+			  and pcp.parenttype = 'Plot Contract'
+			  and pcp.parent = %s
+			limit 1
+			""",
+			(reference_no, self.name),
+			as_dict=True,
+		)
+		if existing:
+			frappe.throw(
+				f"Duplicate payment reference '{reference_no}'. "
+				f"Payment Entry {existing[0].name} already exists for this contract."
+			)
+
+	def _sync_linked_sales_order_status(self):
+		if not self.sales_order or not frappe.db.exists("Plot Sales Order", self.sales_order):
+			return
+		so = frappe.get_doc("Plot Sales Order", self.sales_order)
+		if so.docstatus == 1 and so.status in ("Open", "Converted"):
+			so._sync_payment_status()
 
 	# ------------------------------------------------------------------ #
 	#  GL Entry helpers                                                    #
@@ -352,16 +484,22 @@ class PlotContract(Document):
 		amount = flt(amount)
 		if amount <= 0:
 			frappe.throw("Payment amount must be greater than zero.")
+		if self.docstatus != 1:
+			frappe.throw("Contract must be submitted before recording payment.")
+		if self.contract_status != "Ongoing":
+			frappe.throw(f"Cannot record payment when contract status is '{self.contract_status}'.")
 
 		settings = frappe.get_single("LMS Settings")
+		self._validate_bank_account(bank_account, settings.company)
+		self._check_duplicate_reference(reference_no)
 
 		# Reload from DB so we have the sales_invoice links set during on_submit
 		self.reload()
 
-		# All unpaid rows that have a linked SI, ordered by due date (oldest first)
+		# All unpaid rows ordered by installment number.
 		pending_rows = [
-			row for row in sorted(self.payment_schedule, key=lambda r: str(r.due_date or ""))
-			if row.sales_invoice and row.status != "Paid"
+			row for row in sorted(self.payment_schedule, key=lambda r: cint(r.installment_number or 0))
+			if row.status != "Paid"
 		]
 
 		if not pending_rows:
@@ -376,12 +514,8 @@ class PlotContract(Document):
 			if remaining <= 0:
 				break
 
-			si_doc = frappe.get_doc("Sales Invoice", row.sales_invoice)
-
-			# Submit Draft SIs before allocating against them
-			if si_doc.docstatus == 0:
-				si_doc.submit()
-				si_doc.reload()
+			si_name = self._ensure_row_sales_invoice(row, settings)
+			si_doc = frappe.get_doc("Sales Invoice", si_name)
 
 			if not paid_from:
 				paid_from = si_doc.debit_to
@@ -400,6 +534,11 @@ class PlotContract(Document):
 
 		if not references:
 			frappe.throw("No outstanding amount found to allocate against.")
+		if flt(remaining) > 0:
+			frappe.throw(
+				f"Payment amount exceeds outstanding installments by TZS {remaining:,.0f}. "
+				"Please enter an amount up to the current outstanding total."
+			)
 
 		pe = frappe.get_doc({
 			"doctype": "Payment Entry",
@@ -421,6 +560,7 @@ class PlotContract(Document):
 		pe.submit()
 
 		self.sync_payment_status()
+		self._sync_linked_sales_order_status()
 
 		frappe.msgprint(
 			f"Payment of TZS {amount:,.0f} recorded. Payment Entry: {pe.name}",
@@ -457,6 +597,10 @@ class PlotContract(Document):
 			else:
 				new_status = "Pending"
 
+			# Keep in-memory rows aligned so sequential SI creation can use fresh statuses.
+			row.paid_amount = paid
+			row.status = new_status
+
 			frappe.db.set_value(
 				"Plot Contract Payment",
 				row.name,
@@ -470,6 +614,7 @@ class PlotContract(Document):
 		if total_outstanding <= 0:
 			self.db_set("contract_status", "Completed")
 			frappe.db.set_value("Plot Master", self.plot, "status", "Delivered")
+			self._sync_land_acquisition_summary()
 
 			# Post government fee JE (idempotent — skips if already done)
 			settings = frappe.get_single("LMS Settings")
@@ -509,6 +654,7 @@ class PlotContract(Document):
 		je_name = self._post_termination_journal_entry(settings)
 
 		frappe.db.set_value("Plot Master", self.plot, "status", "Available")
+		self._sync_land_acquisition_summary()
 		self.db_set("contract_status", "Terminated")
 		self.db_set("termination_reason", str(reason).strip())
 

@@ -82,5 +82,5 @@ def get_data():
 		{"kpi": "",                                  "value": "",                    "notes": ""},
 		{"kpi": "── RATIOS ──────────────────",      "value": "",                    "notes": ""},
 		{"kpi": "Gross Margin %",                    "value": pct(margin_pct),       "notes": "Gross Margin ÷ Revenue Recognized"},
-		{"kpi": "Collection Rate %",                 "value": pct(collection_rate),  "notes": "Cash Collected ÷ Total Active Pipeline"},
+		{"kpi": "Collection Rate %",                 "value": pct(collection_rate),  "notes": "Cash Collected ÷ Ongoing+Completed Pipeline"},
 	]

@@ -95,6 +95,46 @@
    "description": "Creditors account used when land is acquired — Dr Land Under Development / Cr this account"
   },
   {
+   "fieldname": "application_fee_section",
+   "fieldtype": "Section Break",
+   "label": "Application Fee"
+  },
+  {
+   "fieldname": "application_fee_amount",
+   "fieldtype": "Float",
+   "label": "Application Fee Amount (TZS)",
+   "reqd": 1,
+   "description": "Fixed application fee charged per plot before a Sales Order can be created"
+  },
+  {
+   "fieldname": "application_fee_validity_days",
+   "fieldtype": "Int",
+   "label": "Application Fee Validity (Days)",
+   "reqd": 1,
+   "default": "7",
+   "description": "Number of days the application fee holds/reserves the plot after payment. Once expired the plot is released back to Available. Non-refundable."
+  },
+  {
+   "fieldname": "unpaid_application_expiry_days",
+   "fieldtype": "Int",
+   "label": "Unpaid Application Expiry (Days)",
+   "reqd": 1,
+   "default": "3",
+   "description": "Number of days an unpaid application can sit before it is auto-cancelled and the plot is freed up for others"
+  },
+  {
+   "fieldname": "application_fee_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "application_fee_income_account",
+   "fieldtype": "Link",
+   "label": "Application Fee Income Account",
+   "options": "Account",
+   "reqd": 1,
+   "description": "Income account where application fees are posted"
+  },
+  {
    "fieldname": "warehouse_section",
    "fieldtype": "Section Break",
    "label": "Warehouse"

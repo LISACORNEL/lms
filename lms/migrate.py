@@ -3,11 +3,12 @@ import frappe
 
 LMS_DOCTYPES = [
 	("lms", "doctype", "lms_settings"),
-	("lms", "doctype", "government_fee_schedule"),
 	("lms", "doctype", "land_acquisition_cost_item"),
 	("lms", "doctype", "land_acquisition"),
 	("lms", "doctype", "plot_master"),
 	("lms", "doctype", "plot_contract_payment"),
+	("lms", "doctype", "plot_application"),
+	("lms", "doctype", "plot_sales_order"),
 	("lms", "doctype", "plot_contract"),
 	("lms", "doctype", "plot_handover"),
 ]

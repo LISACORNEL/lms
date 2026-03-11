@@ -38,36 +38,24 @@ frappe.ui.form.on('Land Acquisition', {
 });
 
 function refresh_plot_counts(frm) {
-    const statuses = ['Available', 'Reserved', 'Delivered', 'Title Closed'];
-    const counts = { total: 0, available: 0, reserved: 0, delivered: 0 };
-
-    let done = 0;
-    statuses.forEach(function(status) {
-        frappe.call({
-            method: 'frappe.client.get_count',
-            args: {
-                doctype: 'Plot Master',
-                filters: { land_acquisition: frm.doc.name, status: status }
-            },
-            callback: function(r) {
-                const n = r.message || 0;
-                counts.total += n;
-                if (status === 'Available') counts.available = n;
-                if (status === 'Reserved') counts.reserved = n;
-                if (status === 'Delivered' || status === 'Title Closed') counts.delivered += n;
-                done++;
-                if (done === statuses.length) {
-                    frm.doc.total_plots = counts.total;
-                    frm.doc.available_plots = counts.available;
-                    frm.doc.reserved_plots = counts.reserved;
-                    frm.doc.delivered_plots = counts.delivered;
-                    frm.refresh_field('total_plots');
-                    frm.refresh_field('available_plots');
-                    frm.refresh_field('reserved_plots');
-                    frm.refresh_field('delivered_plots');
-                }
+    frappe.call({
+        method: 'lms.lms.doctype.land_acquisition.land_acquisition.sync_land_acquisition_plot_summary',
+        args: { land_acquisition: frm.doc.name },
+        callback: function(r) {
+            const s = r.message || {};
+            frm.doc.total_plots = Number(s.total_plots || 0);
+            frm.doc.available_plots = Number(s.available_plots || 0);
+            frm.doc.reserved_plots = Number(s.reserved_plots || 0);
+            frm.doc.delivered_plots = Number(s.delivered_plots || 0);
+            if (s.status) {
+                frm.doc.status = s.status;
             }
-        });
+            frm.refresh_field('status');
+            frm.refresh_field('total_plots');
+            frm.refresh_field('available_plots');
+            frm.refresh_field('reserved_plots');
+            frm.refresh_field('delivered_plots');
+        }
     });
 }
 
