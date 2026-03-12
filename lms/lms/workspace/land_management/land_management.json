@@ -1,289 +1,315 @@
 {
- "charts": [],
- "content": "[{\"id\":\"intro-lms01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"text-muted\\\">Create your first land supplier and customer — begin your journey on the Land Management System.</span>\",\"col\":12}},{\"id\":\"MTUC3-YCjT\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"AsLgdDMC9U\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Land Acquisition\",\"col\":3}},{\"id\":\"PQXbmho91z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Master\",\"col\":3}},{\"id\":\"sc-plotapp01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Application\",\"col\":3}},{\"id\":\"sc-plotso01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Sales Order\",\"col\":3}},{\"id\":\"6bjswerIf5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Contract\",\"col\":3}},{\"id\":\"lmsjrFvEKN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Handover\",\"col\":3}},{\"id\":\"m9h4iIVZon\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"LMS Executive Dashboard\",\"col\":3}},{\"id\":\"HMu7hQg3qd\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"esbrQIZUB8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"Re4NEB7BM4\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"Ubex7a0LDE\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales & Contracts\",\"col\":4}},{\"id\":\"Fa2zvYy3iC\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}}]",
- "creation": "2026-03-05 15:57:04.259107",
- "custom_blocks": [],
- "docstatus": 0,
- "doctype": "Workspace",
- "for_user": "",
- "hide_custom": 0,
- "icon": "retail",
- "idx": 0,
- "indicator_color": "",
- "is_hidden": 0,
- "label": "Land Management System",
- "links": [
-  {
-   "hidden": 0,
-   "icon": "table",
-   "is_query_report": 0,
-   "label": "Masters",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Land Acquisition",
-   "link_count": 0,
-   "link_to": "Land Acquisition",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Plot Master",
-   "link_count": 0,
-   "link_to": "Plot Master",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "LMS Settings",
-   "link_count": 0,
-   "link_to": "LMS Settings",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Customer",
-   "link_count": 0,
-   "link_to": "Customer",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Land Supplier",
-   "link_count": 0,
-   "link_to": "Supplier",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "icon": "file",
-   "is_query_report": 0,
-   "label": "Sales & Contracts",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Plot Application",
-   "link_count": 0,
-   "link_to": "Plot Application",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Plot Sales Order",
-   "link_count": 0,
-   "link_to": "Plot Sales Order",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Plot Contract",
-   "link_count": 0,
-   "link_to": "Plot Contract",
-   "link_type": "DocType",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 0,
-   "label": "Plot Handover",
-   "link_count": 0,
-   "link_to": "Plot Handover",
-   "link_type": "DocType",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "hidden": 0,
-   "icon": "small-message",
-   "is_query_report": 0,
-   "label": "Reports",
-   "link_count": 0,
-   "onboard": 0,
-   "type": "Card Break"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "LMS Executive Dashboard",
-   "link_count": 0,
-   "link_to": "LMS Executive Dashboard",
-   "link_type": "Report",
-   "onboard": 1,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "LMS Plot Inventory",
-   "link_count": 0,
-   "link_to": "LMS Plot Inventory",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "LMS Sales Pipeline",
-   "link_count": 0,
-   "link_to": "LMS Sales Pipeline",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "LMS Collections",
-   "link_count": 0,
-   "link_to": "LMS Collections",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "LMS Unearned Revenue",
-   "link_count": 0,
-   "link_to": "LMS Unearned Revenue",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "LMS Revenue Recognition",
-   "link_count": 0,
-   "link_to": "LMS Revenue Recognition",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "LMS Government Payable",
-   "link_count": 0,
-   "link_to": "LMS Government Payable",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  },
-  {
-   "dependencies": "",
-   "hidden": 0,
-   "is_query_report": 1,
-   "label": "LMS Business Trend",
-   "link_count": 0,
-   "link_to": "LMS Business Trend",
-   "link_type": "Report",
-   "onboard": 0,
-   "type": "Link"
-  }
- ],
- "modified": "2026-03-10 10:00:00.000000",
- "modified_by": "Administrator",
- "module": "Lms",
- "name": "Land Management",
- "number_cards": [],
- "owner": "Administrator",
- "parent_page": "",
- "public": 1,
- "quick_lists": [],
- "restrict_to_domain": "",
- "roles": [],
- "sequence_id": 1.0,
- "shortcuts": [
-  {
-   "color": "Blue",
-   "label": "Land Acquisition",
-   "link_to": "Land Acquisition",
-   "type": "DocType"
-  },
-  {
-   "color": "Green",
-   "label": "Plot Master",
-   "link_to": "Plot Master",
-   "type": "DocType"
-  },
-  {
-   "color": "Cyan",
-   "label": "Plot Application",
-   "link_to": "Plot Application",
-   "type": "DocType"
-  },
-  {
-   "color": "Pink",
-   "label": "Plot Sales Order",
-   "link_to": "Plot Sales Order",
-   "type": "DocType"
-  },
-  {
-   "color": "Yellow",
-   "label": "Plot Contract",
-   "link_to": "Plot Contract",
-   "type": "DocType"
-  },
-  {
-   "color": "Orange",
-   "label": "Plot Handover",
-   "link_to": "Plot Handover",
-   "type": "DocType"
-  },
-  {
-   "color": "Purple",
-   "label": "LMS Executive Dashboard",
-   "link_to": "LMS Executive Dashboard",
-   "report_ref_doctype": "Plot Contract",
-   "type": "Report"
-  }
- ],
- "title": "Land Management"
+  "charts": [
+    {
+      "chart_name": "LMS Plot Status Mix",
+      "label": "Plot Status Mix"
+    },
+    {
+      "chart_name": "LMS Business Trend Overview",
+      "label": "Business Trend Overview"
+    }
+  ],
+  "content": "[{\"id\":\"intro-lms01\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"text-muted\\\">Create your first land supplier and customer — begin your journey on the Land Management System.</span>\",\"col\":12}},{\"id\":\"lms-snap-head\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Executive Snapshot</b></span>\",\"col\":12}},{\"id\":\"lms-card-avail\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Available Plots\",\"col\":3}},{\"id\":\"lms-card-resvd\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Reserved Plots\",\"col\":3}},{\"id\":\"lms-card-ongo\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Ongoing Contracts\",\"col\":3}},{\"id\":\"lms-card-cash\",\"type\":\"number_card\",\"data\":{\"number_card_name\":\"Cash Collected\",\"col\":3}},{\"id\":\"lms-chart-mix\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Plot Status Mix\",\"col\":6}},{\"id\":\"lms-chart-trnd\",\"type\":\"chart\",\"data\":{\"chart_name\":\"Business Trend Overview\",\"col\":6}},{\"id\":\"lms-snap-spacer\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"lms-shortcut-head\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Your Shortcuts</b></span>\",\"col\":12}},{\"id\":\"AsLgdDMC9U\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Land Acquisition\",\"col\":3}},{\"id\":\"PQXbmho91z\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Master\",\"col\":3}},{\"id\":\"sc-plotapp01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Application\",\"col\":3}},{\"id\":\"sc-plotso01\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Sales Order\",\"col\":3}},{\"id\":\"6bjswerIf5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Contract\",\"col\":3}},{\"id\":\"lmsjrFvEKN\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Plot Handover\",\"col\":3}},{\"id\":\"m9h4iIVZon\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"LMS Executive Dashboard\",\"col\":3}},{\"id\":\"HMu7hQg3qd\",\"type\":\"spacer\",\"data\":{\"col\":12}},{\"id\":\"esbrQIZUB8\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\"><b>Reports &amp; Masters</b></span>\",\"col\":12}},{\"id\":\"Re4NEB7BM4\",\"type\":\"card\",\"data\":{\"card_name\":\"Masters\",\"col\":4}},{\"id\":\"Ubex7a0LDE\",\"type\":\"card\",\"data\":{\"card_name\":\"Sales & Contracts\",\"col\":4}},{\"id\":\"Fa2zvYy3iC\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports\",\"col\":4}}]",
+  "creation": "2026-03-05 15:57:04.259107",
+  "custom_blocks": [],
+  "docstatus": 0,
+  "doctype": "Workspace",
+  "for_user": "",
+  "hide_custom": 0,
+  "icon": "retail",
+  "idx": 0,
+  "indicator_color": "",
+  "is_hidden": 0,
+  "label": "Land Management System",
+  "links": [
+    {
+      "hidden": 0,
+      "icon": "table",
+      "is_query_report": 0,
+      "label": "Masters",
+      "link_count": 0,
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Land Acquisition",
+      "link_count": 0,
+      "link_to": "Land Acquisition",
+      "link_type": "DocType",
+      "onboard": 1,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Plot Master",
+      "link_count": 0,
+      "link_to": "Plot Master",
+      "link_type": "DocType",
+      "onboard": 1,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "LMS Settings",
+      "link_count": 0,
+      "link_to": "LMS Settings",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Customer",
+      "link_count": 0,
+      "link_to": "Customer",
+      "link_type": "DocType",
+      "onboard": 1,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Land Supplier",
+      "link_count": 0,
+      "link_to": "Supplier",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "icon": "file",
+      "is_query_report": 0,
+      "label": "Sales & Contracts",
+      "link_count": 0,
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Plot Application",
+      "link_count": 0,
+      "link_to": "Plot Application",
+      "link_type": "DocType",
+      "onboard": 1,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Plot Sales Order",
+      "link_count": 0,
+      "link_to": "Plot Sales Order",
+      "link_type": "DocType",
+      "onboard": 1,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Plot Contract",
+      "link_count": 0,
+      "link_to": "Plot Contract",
+      "link_type": "DocType",
+      "onboard": 1,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Plot Handover",
+      "link_count": 0,
+      "link_to": "Plot Handover",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "icon": "small-message",
+      "is_query_report": 0,
+      "label": "Reports",
+      "link_count": 0,
+      "onboard": 0,
+      "type": "Card Break"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "LMS Executive Dashboard",
+      "link_count": 0,
+      "link_to": "LMS Executive Dashboard",
+      "link_type": "Report",
+      "onboard": 1,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "LMS Plot Inventory",
+      "link_count": 0,
+      "link_to": "LMS Plot Inventory",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "LMS Sales Pipeline",
+      "link_count": 0,
+      "link_to": "LMS Sales Pipeline",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "LMS Collections",
+      "link_count": 0,
+      "link_to": "LMS Collections",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "LMS Unearned Revenue",
+      "link_count": 0,
+      "link_to": "LMS Unearned Revenue",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "LMS Revenue Recognition",
+      "link_count": 0,
+      "link_to": "LMS Revenue Recognition",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "LMS Government Payable",
+      "link_count": 0,
+      "link_to": "LMS Government Payable",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    },
+    {
+      "dependencies": "",
+      "hidden": 0,
+      "is_query_report": 1,
+      "label": "LMS Business Trend",
+      "link_count": 0,
+      "link_to": "LMS Business Trend",
+      "link_type": "Report",
+      "onboard": 0,
+      "type": "Link"
+    }
+  ],
+  "modified": "2026-03-12 21:00:00.000000",
+  "modified_by": "Administrator",
+  "module": "Lms",
+  "name": "Land Management",
+  "number_cards": [
+    {
+      "label": "Available Plots",
+      "number_card_name": "LMS Available Plots"
+    },
+    {
+      "label": "Reserved Plots",
+      "number_card_name": "LMS Reserved Plots"
+    },
+    {
+      "label": "Ongoing Contracts",
+      "number_card_name": "LMS Ongoing Contracts"
+    },
+    {
+      "label": "Cash Collected",
+      "number_card_name": "LMS Cash Collected"
+    }
+  ],
+  "owner": "Administrator",
+  "parent_page": "",
+  "public": 1,
+  "quick_lists": [],
+  "restrict_to_domain": "",
+  "roles": [],
+  "sequence_id": 1,
+  "shortcuts": [
+    {
+      "color": "Blue",
+      "label": "Land Acquisition",
+      "link_to": "Land Acquisition",
+      "type": "DocType"
+    },
+    {
+      "color": "Green",
+      "label": "Plot Master",
+      "link_to": "Plot Master",
+      "type": "DocType"
+    },
+    {
+      "color": "Cyan",
+      "label": "Plot Application",
+      "link_to": "Plot Application",
+      "type": "DocType"
+    },
+    {
+      "color": "Pink",
+      "label": "Plot Sales Order",
+      "link_to": "Plot Sales Order",
+      "type": "DocType"
+    },
+    {
+      "color": "Yellow",
+      "label": "Plot Contract",
+      "link_to": "Plot Contract",
+      "type": "DocType"
+    },
+    {
+      "color": "Orange",
+      "label": "Plot Handover",
+      "link_to": "Plot Handover",
+      "type": "DocType"
+    },
+    {
+      "color": "Purple",
+      "label": "LMS Executive Dashboard",
+      "link_to": "LMS Executive Dashboard",
+      "report_ref_doctype": "Plot Contract",
+      "type": "Report"
+    }
+  ],
+  "title": "Land Management"
 }

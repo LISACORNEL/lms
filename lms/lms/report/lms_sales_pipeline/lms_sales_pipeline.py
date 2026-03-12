@@ -7,7 +7,8 @@ def execute(filters=None):
 	columns = get_columns()
 	data    = get_data(filters)
 	summary = get_summary(data)
-	return columns, data, None, None, summary
+	chart   = get_chart(data)
+	return columns, data, None, chart, summary
 
 
 def get_columns():
@@ -94,8 +95,52 @@ def get_summary(data):
 	total_value       = sum(flt(r["selling_price"])     for r in data)
 	total_paid        = sum(flt(r["total_paid"])        for r in data)
 	total_outstanding = sum(flt(r["total_outstanding"]) for r in data)
+	ongoing_contracts = sum(1 for r in data if r["contract_status"] == "Ongoing")
+	completed_contracts = sum(1 for r in data if r["contract_status"] == "Completed")
+	progress_pct = (total_paid / total_value * 100) if total_value else 0
 	return [
-		{"label": "Total Contract Value", "value": total_value,       "datatype": "Float", "indicator": "Blue"},
-		{"label": "Total Paid",           "value": total_paid,        "datatype": "Float", "indicator": "Green"},
-		{"label": "Total Outstanding",    "value": total_outstanding, "datatype": "Float", "indicator": "Red"},
+		{"label": "Total Contract Value", "value": total_value,       "datatype": "Currency", "indicator": "Blue"},
+		{"label": "Total Paid",           "value": total_paid,        "datatype": "Currency", "indicator": "Green"},
+		{"label": "Total Outstanding",    "value": total_outstanding, "datatype": "Currency", "indicator": "Red"},
+		{"label": "Ongoing Contracts",    "value": ongoing_contracts, "datatype": "Int", "indicator": "Orange"},
+		{"label": "Completed Contracts",  "value": completed_contracts, "datatype": "Int", "indicator": "Green"},
+		{"label": "Collection Progress %", "value": progress_pct, "datatype": "Percent", "indicator": "Green" if progress_pct >= 70 else "Orange"},
 	]
+
+
+def get_chart(data):
+	if not data:
+		return None
+
+	status_order = ["Ongoing", "Completed", "Terminated", "Cancelled", "Draft"]
+	status_map = {status: 0 for status in status_order}
+	for row in data:
+		status = row.get("contract_status")
+		if status in status_map:
+			status_map[status] += 1
+
+	labels = [status for status in status_order if status_map.get(status)]
+	if not labels:
+		return None
+
+	color_map = {
+		"Ongoing": "#f08c00",
+		"Completed": "#2f9e44",
+		"Terminated": "#e8590c",
+		"Cancelled": "#e03131",
+		"Draft": "#868e96",
+	}
+
+	return {
+		"data": {
+			"labels": labels,
+			"datasets": [
+				{
+					"name": "Contracts",
+					"values": [status_map[label] for label in labels],
+				}
+			],
+		},
+		"type": "donut",
+		"colors": [color_map[label] for label in labels],
+	}

@@ -7,7 +7,8 @@ def execute(filters=None):
 	columns = get_columns()
 	data    = get_data(filters)
 	chart   = get_chart(data)
-	return columns, data, None, chart
+	summary = get_summary(data)
+	return columns, data, None, chart, summary
 
 
 def get_columns():
@@ -113,3 +114,29 @@ def get_chart(data):
 		"type":   "bar",
 		"colors": ["#2c5f2e", "#4a9e4d"],
 	}
+
+
+def get_summary(data):
+	if not data:
+		return []
+
+	total_contracts = sum(int(r.get("new_contracts") or 0) for r in data)
+	total_value = sum(flt(r.get("new_contract_value")) for r in data)
+	total_revenue = sum(flt(r.get("revenue_collected")) for r in data)
+	total_completed = sum(int(r.get("completed") or 0) for r in data)
+	total_terminated = sum(int(r.get("terminated") or 0) for r in data)
+	collection_ratio = (total_revenue / total_value * 100) if total_value else 0
+
+	return [
+		{"label": "New Contracts", "value": total_contracts, "datatype": "Int", "indicator": "Blue"},
+		{"label": "New Contract Value", "value": total_value, "datatype": "Currency", "indicator": "Blue"},
+		{"label": "Revenue Collected", "value": total_revenue, "datatype": "Currency", "indicator": "Green"},
+		{"label": "Completed Contracts", "value": total_completed, "datatype": "Int", "indicator": "Green"},
+		{"label": "Terminated Contracts", "value": total_terminated, "datatype": "Int", "indicator": "Orange"},
+		{
+			"label": "Collection vs New Value %",
+			"value": collection_ratio,
+			"datatype": "Percent",
+			"indicator": "Green" if collection_ratio >= 70 else "Orange",
+		},
+	]

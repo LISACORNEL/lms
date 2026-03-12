@@ -186,11 +186,39 @@ class PlotContract(Document):
 		self.total_contract_value = flt(self.selling_price)
 		total_paid = sum(flt(row.paid_amount) for row in self.payment_schedule)
 		self.total_paid = total_paid
-		self.total_outstanding = flt(self.selling_price) - total_paid
+		total_outstanding = flt(self.selling_price) - total_paid
+		self.total_outstanding = total_outstanding
+		self.payment_progress = self._derive_payment_progress(total_paid, total_outstanding)
 		if flt(self.government_share_percent) > 0:
 			self.government_fee_withheld = (
 				flt(self.selling_price) * flt(self.government_share_percent) / 100
 			)
+
+	def _derive_payment_progress(self, total_paid, total_outstanding):
+		if flt(total_paid) <= 0:
+			return "Unpaid"
+		if flt(total_outstanding) <= 0:
+			return "Fully Paid"
+
+		first_expected = 0.0
+		first_paid = 0.0
+		for row in self.payment_schedule:
+			if cint(row.installment_number or 0) == 1:
+				first_expected = flt(row.expected_amount)
+				first_paid = flt(row.paid_amount)
+				break
+
+		if first_expected > 0 and first_paid >= first_expected:
+			later_paid = sum(
+				flt(row.paid_amount)
+				for row in self.payment_schedule
+				if cint(row.installment_number or 0) > 1
+			)
+			if later_paid > 0:
+				return "Advance + Installments Paid"
+			return "Advance Paid"
+
+		return "Partially Paid"
 
 	# ------------------------------------------------------------------ #
 	#  Submit / Cancel                                                     #
@@ -610,6 +638,7 @@ class PlotContract(Document):
 		total_outstanding = flt(self.selling_price) - total_paid
 		self.db_set("total_paid", total_paid)
 		self.db_set("total_outstanding", total_outstanding)
+		self.db_set("payment_progress", self._derive_payment_progress(total_paid, total_outstanding))
 
 		if total_outstanding <= 0:
 			self.db_set("contract_status", "Completed")

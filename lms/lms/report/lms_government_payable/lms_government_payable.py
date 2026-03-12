@@ -7,7 +7,8 @@ def execute(filters=None):
 	columns = get_columns()
 	data    = get_data(filters)
 	summary = get_summary(data)
-	return columns, data, None, None, summary
+	chart   = get_chart(data)
+	return columns, data, None, chart, summary
 
 
 def get_columns():
@@ -92,3 +93,27 @@ def get_summary(data):
 		{"label": "Posted to Govt Payable",   "value": posted_fee,  "datatype": "Float", "indicator": "Green"},
 		{"label": "Still Pending",            "value": pending_fee, "datatype": "Float", "indicator": "Red"},
 	]
+
+
+def get_chart(data):
+	if not data:
+		return None
+
+	posted_fee = sum(flt(r["government_fee_withheld"]) for r in data if r["fee_status"] == "Posted")
+	pending_fee = sum(flt(r["government_fee_withheld"]) for r in data if r["fee_status"] == "Pending")
+	if posted_fee <= 0 and pending_fee <= 0:
+		return None
+
+	return {
+		"data": {
+			"labels": ["Posted", "Pending"],
+			"datasets": [
+				{
+					"name": "Government Fee",
+					"values": [posted_fee, pending_fee],
+				}
+			],
+		},
+		"type": "donut",
+		"colors": ["#2f9e44", "#e03131"],
+	}

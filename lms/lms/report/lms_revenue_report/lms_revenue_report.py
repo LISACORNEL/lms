@@ -7,7 +7,8 @@ def execute(filters=None):
 	columns = get_columns()
 	data = get_data(filters)
 	chart = get_chart(data)
-	return columns, data, None, chart
+	summary = get_summary(data)
+	return columns, data, None, chart, summary
 
 
 def get_columns():
@@ -40,13 +41,20 @@ def get_data(filters):
 			COUNT(DISTINCT pe.name)                                      AS payment_count,
 			COUNT(DISTINCT pc.name)                                      AS contract_count,
 			SUM(per.allocated_amount)                                    AS total_collected,
-			SUM(per.allocated_amount * pc.government_share_percent / 100) AS govt_fee
+			SUM(
+				CASE
+					WHEN pc.contract_status = 'Completed'
+					THEN per.allocated_amount * pc.government_share_percent / 100
+					ELSE 0
+				END
+			)                                                            AS govt_fee
 		FROM `tabPayment Entry` pe
 		INNER JOIN `tabPayment Entry Reference` per
 			ON  per.parent             = pe.name
 			AND per.reference_doctype  = 'Sales Invoice'
 		INNER JOIN `tabPlot Contract Payment` pcp
 			ON  pcp.sales_invoice = per.reference_name
+			AND pcp.parenttype    = 'Plot Contract'
 		INNER JOIN `tabPlot Contract` pc
 			ON  pc.name     = pcp.parent
 			AND pc.docstatus = 1
@@ -106,3 +114,25 @@ def get_chart(data):
 		"type":   "bar",
 		"colors": ["#2c5f2e", "#4a9e4d", "#f0a500"],
 	}
+
+
+def get_summary(data):
+	if not data:
+		return []
+
+	total_row = next((r for r in data if r.get("period") == "TOTAL"), None)
+	if not total_row:
+		return []
+
+	total_collected = flt(total_row.get("total_collected"))
+	total_govt_fee = flt(total_row.get("govt_fee"))
+	net_revenue = flt(total_row.get("net_revenue"))
+	govt_ratio = (total_govt_fee / total_collected * 100) if total_collected else 0
+
+	return [
+		{"label": "Total Payments", "value": int(total_row.get("payment_count") or 0), "datatype": "Int", "indicator": "Blue"},
+		{"label": "Total Collected", "value": total_collected, "datatype": "Currency", "indicator": "Blue"},
+		{"label": "Government Portion", "value": total_govt_fee, "datatype": "Currency", "indicator": "Orange"},
+		{"label": "Net Revenue", "value": net_revenue, "datatype": "Currency", "indicator": "Green"},
+		{"label": "Government Share %", "value": govt_ratio, "datatype": "Percent", "indicator": "Orange"},
+	]

@@ -30,6 +30,7 @@
   "payment_summary_section",
   "total_contract_value",
   "total_paid",
+  "payment_progress",
   "col_break_3",
   "total_outstanding",
   "government_fee_withheld",
@@ -197,6 +198,15 @@
    "fieldname": "total_paid",
    "fieldtype": "Float",
    "label": "Total Paid (TZS)",
+   "read_only": 1
+  },
+  {
+   "default": "Unpaid",
+   "fieldname": "payment_progress",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Payment Progress",
+   "options": "Unpaid\nAdvance Paid\nAdvance + Installments Paid\nFully Paid\nPartially Paid",
    "read_only": 1
   },
   {

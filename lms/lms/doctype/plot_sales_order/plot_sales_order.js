@@ -20,6 +20,8 @@ frappe.ui.form.on('Plot Sales Order', {
 	},
 
 	refresh: function(frm) {
+		ensure_default_notes_template(frm);
+
 		// Status indicator colours
 		const colors = {
 			'Draft': 'gray',
@@ -27,8 +29,11 @@ frappe.ui.form.on('Plot Sales Order', {
 			'Converted': 'green',
 			'Cancelled': 'red'
 		};
-		const color = colors[frm.doc.status] || 'gray';
-		frm.page.set_indicator(frm.doc.status, color);
+		let display_status = frm.doc.status || 'Draft';
+		if (frm.doc.docstatus === 0) display_status = 'Draft';
+		if (frm.doc.docstatus === 2) display_status = 'Cancelled';
+		const color = colors[display_status] || 'gray';
+		frm.page.set_indicator(display_status, color);
 
 		// "Receive Payment" button — available while submitted SO still has outstanding balance
 		if (
@@ -245,4 +250,32 @@ function build_payment_schedule(frm, booking_fee, balance, total_days) {
 	}
 
 	frm.refresh_field('payment_schedule');
+}
+
+function ensure_default_notes_template(frm) {
+	if (!frm.is_new() || frm.doc.notes) return;
+
+	frappe.db.get_doc('LMS Settings', 'LMS Settings')
+		.then(settings => {
+			if (frm.doc.notes) return;
+
+			const unpaidDays = Number(settings.unpaid_application_expiry_days || 0);
+			const paidDays = Number(settings.application_fee_validity_days || 0);
+			const completionDays = Number(frm.doc.payment_completion_days || 90);
+
+			const notes = [
+				'Sales Order Payment Terms',
+				'1. Plot Application fee is non-refundable.',
+				`2. If the application fee is not paid, the application auto-cancels after ${unpaidDays} day(s).`,
+				`3. After application fee payment, the reservation remains valid for ${paidDays} day(s).`,
+				'4. Booking fee (advance) is the first payment under this Sales Order.',
+				`5. Remaining balance/installments must be paid within ${completionDays} day(s) from Order Date, based on the schedule.`,
+				'6. Late installments may be marked Overdue and can lead to contract cancellation/termination per LMS policy.'
+			].join('\n');
+
+			frm.set_value('notes', notes);
+		})
+		.catch(() => {
+			// Keep form usable even if settings fetch fails.
+		});
 }

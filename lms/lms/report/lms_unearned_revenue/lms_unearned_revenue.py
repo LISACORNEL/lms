@@ -7,7 +7,8 @@ def execute(filters=None):
 	columns = get_columns()
 	data    = get_data(filters)
 	summary = get_summary(data)
-	return columns, data, None, None, summary
+	chart   = get_chart(data)
+	return columns, data, None, chart, summary
 
 
 def get_columns():
@@ -74,8 +75,37 @@ def get_summary(data):
 		return []
 	total_advances    = sum(flt(r["total_paid"])        for r in data)
 	total_outstanding = sum(flt(r["total_outstanding"]) for r in data)
+	collection_pct = (total_advances / (total_advances + total_outstanding) * 100) if (total_advances + total_outstanding) else 0
 	return [
 		{"label": "Contracts Pending Delivery",  "value": len(data),          "datatype": "Int",   "indicator": "Blue"},
-		{"label": "Total Advances Collected",    "value": total_advances,     "datatype": "Float", "indicator": "Yellow"},
-		{"label": "Revenue Still to be Earned",  "value": total_outstanding,  "datatype": "Float", "indicator": "Red"},
+		{"label": "Total Advances Collected",    "value": total_advances,     "datatype": "Currency", "indicator": "Yellow"},
+		{"label": "Revenue Still to be Earned",  "value": total_outstanding,  "datatype": "Currency", "indicator": "Red"},
+		{
+			"label": "Collected Portion %",
+			"value": collection_pct,
+			"datatype": "Percent",
+			"indicator": "Green" if collection_pct >= 50 else "Orange",
+		},
 	]
+
+
+def get_chart(data):
+	if not data:
+		return None
+
+	top_rows = sorted(data, key=lambda d: flt(d.get("total_outstanding")), reverse=True)[:8]
+	if not top_rows:
+		return None
+
+	return {
+		"data": {
+			"labels": [r["contract"] for r in top_rows],
+			"datasets": [
+				{"name": "Collected", "values": [flt(r["total_paid"]) for r in top_rows]},
+				{"name": "Unearned", "values": [flt(r["total_outstanding"]) for r in top_rows]},
+			],
+		},
+		"type": "bar",
+		"colors": ["#f08c00", "#e03131"],
+		"barOptions": {"stacked": 1},
+	}

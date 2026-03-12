@@ -24,51 +24,77 @@ frappe.ui.form.on('Plot Application', {
 		// "Record Fee Payment" button — only on Submitted applications
 		if (frm.doc.docstatus === 1 && frm.doc.status === 'Submitted') {
 			frm.add_custom_button('Record Fee Payment', function() {
-				let d = new frappe.ui.Dialog({
-					title: 'Record Application Fee Payment',
-					fields: [
-						{
-							fieldname: 'fee_info',
-							fieldtype: 'HTML',
-							options: '<p style="margin-bottom:10px">Application Fee: <b>TZS ' +
-								(frm.doc.application_fee || 0).toLocaleString() +
-								'</b></p>'
-						},
-						{
-							fieldname: 'payment_date',
-							fieldtype: 'Date',
-							label: 'Payment Date',
-							reqd: 1,
-							default: frappe.datetime.get_today()
-						},
+				const openPaymentDialog = (defaultBankAccount) => {
+					let d = new frappe.ui.Dialog({
+						title: 'Record Application Fee Payment',
+						fields: [
+							{
+								fieldname: 'fee_info',
+								fieldtype: 'HTML',
+								options: '<p style="margin-bottom:10px">Application Fee: <b>TZS ' +
+									(frm.doc.application_fee || 0).toLocaleString() +
+									'</b></p>'
+							},
+							{
+								fieldname: 'payment_date',
+								fieldtype: 'Date',
+								label: 'Payment Date',
+								reqd: 1,
+								default: frappe.datetime.get_today()
+							},
+							{
+								fieldname: 'bank_account',
+								fieldtype: 'Link',
+								label: 'Received In (Bank/Cash)',
+								options: 'Account',
+								default: defaultBankAccount || '',
+								description: 'Defaults from LMS Settings (Application Fee Receiving Account).',
+								get_query: function() {
+									return {
+										filters: {
+											is_group: 0,
+											account_type: ['in', ['Bank', 'Cash']]
+										}
+									};
+								}
+							},
 							{
 								fieldname: 'reference_no',
 								fieldtype: 'Data',
 								label: 'Reference No',
 								description: 'Bank receipt / transaction reference'
-						}
-					],
-					primary_action_label: 'Record Payment',
-					primary_action: function(values) {
-						frappe.call({
-							method: 'record_fee_payment',
-							doc: frm.doc,
-							args: {
-								payment_date: values.payment_date,
-								reference_no: values.reference_no || ''
-							},
-							freeze: true,
-							freeze_message: 'Recording payment...',
-							callback: function(r) {
-								if (!r.exc) {
-									d.hide();
-									frm.reload_doc();
-								}
 							}
-						});
-					}
-				});
-				d.show();
+						],
+						primary_action_label: 'Record Payment',
+						primary_action: function(values) {
+							frappe.call({
+								method: 'record_fee_payment',
+								doc: frm.doc,
+								args: {
+									payment_date: values.payment_date,
+									bank_account: values.bank_account || '',
+									reference_no: values.reference_no || ''
+								},
+								freeze: true,
+								freeze_message: 'Recording payment...',
+								callback: function(r) {
+									if (!r.exc) {
+										d.hide();
+										frm.reload_doc();
+									}
+								}
+							});
+						}
+					});
+					d.show();
+				};
+
+				frappe.db.get_value('LMS Settings', 'LMS Settings', 'application_fee_receiving_account')
+					.then(r => {
+						const defaultBankAccount = (r.message && r.message.application_fee_receiving_account) || '';
+						openPaymentDialog(defaultBankAccount);
+					})
+					.catch(() => openPaymentDialog(''));
 				}, 'Actions');
 			}
 

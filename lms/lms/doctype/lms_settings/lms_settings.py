@@ -13,6 +13,7 @@ ACCOUNT_FIELD_RULES = {
     "forfeited_deposits_account": {"root_type": "Income"},
     "seller_payable_account": {"root_type": "Liability"},
     "application_fee_income_account": {"root_type": "Income"},
+    "application_fee_receiving_account": {"root_type": "Asset", "account_type": ("Bank", "Cash")},
 }
 
 
@@ -37,6 +38,7 @@ class LMSSettings(Document):
             "forfeited_deposits_account",
             "seller_payable_account",
             "application_fee_income_account",
+            "application_fee_receiving_account",
         ]
 
         # Required fields for core operation
@@ -62,6 +64,12 @@ class LMSSettings(Document):
             "forfeited_deposits_account": "Income",
             "seller_payable_account": "Liability",
             "tcb_bank_account": "Asset",
+            "application_fee_receiving_account": "Asset",
+        }
+
+        account_type_constraints = {
+            "tcb_bank_account": {"Bank"},
+            "application_fee_receiving_account": {"Bank", "Cash"},
         }
 
         for field in account_fields:
@@ -86,4 +94,15 @@ class LMSSettings(Document):
                         f"Account '{account}' in field "
                         f"'{self.meta.get_field(field).label}' "
                         f"is type '{root_type}', expected '{expected_type}'."
+                    )
+
+            allowed_account_types = account_type_constraints.get(field)
+            if allowed_account_types:
+                account_type = frappe.db.get_value("Account", account, "account_type")
+                if account_type and account_type not in allowed_account_types:
+                    allowed = ", ".join(sorted(allowed_account_types))
+                    frappe.throw(
+                        f"Account '{account}' in field "
+                        f"'{self.meta.get_field(field).label}' "
+                        f"is account type '{account_type}', expected one of: {allowed}."
                     )

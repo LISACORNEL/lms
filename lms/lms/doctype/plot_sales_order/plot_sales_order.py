@@ -19,6 +19,9 @@ class PlotSalesOrder(Document):
 	# ------------------------------------------------------------------ #
 
 	def validate(self):
+		self.validate_control_number_integrity()
+		self.sync_header_status_with_docstatus()
+		self.set_default_notes_template()
 		self.fill_from_plot_application()
 		self.validate_application_fee()
 		self.validate_plot_available()
@@ -26,6 +29,58 @@ class PlotSalesOrder(Document):
 		self.calculate_financials()
 		self.generate_payment_schedule()
 		self.calculate_payment_summary()
+
+	def sync_header_status_with_docstatus(self):
+		"""Keep status label aligned with Frappe docstatus lifecycle."""
+		if self.docstatus == 0:
+			self.status = "Draft"
+		elif self.docstatus == 2:
+			self.status = "Cancelled"
+		elif self.docstatus == 1 and (not self.status or self.status == "Draft"):
+			self.status = "Open"
+
+	def validate_control_number_integrity(self):
+		"""Protect control number immutability after assignment."""
+		if not self.name or not frappe.db.exists("Plot Sales Order", self.name):
+			return
+
+		prior = frappe.db.get_value(
+			"Plot Sales Order",
+			self.name,
+			["docstatus", "control_number"],
+			as_dict=True,
+		)
+		if not prior:
+			return
+
+		if prior.control_number and self.control_number and self.control_number != prior.control_number:
+			frappe.throw(
+				f"Control Number is immutable once assigned. Existing value: {prior.control_number}."
+			)
+
+		if prior.control_number and not self.control_number and prior.docstatus in (1, 2):
+			frappe.throw(
+				"Control Number cannot be cleared for submitted/cancelled Sales Orders."
+			)
+
+	def set_default_notes_template(self):
+		"""Prefill customer-facing payment terms for new Sales Orders."""
+		if not self.is_new() or self.notes:
+			return
+
+		unpaid_days = cint(frappe.db.get_single_value("LMS Settings", "unpaid_application_expiry_days") or 0)
+		paid_days = cint(frappe.db.get_single_value("LMS Settings", "application_fee_validity_days") or 0)
+		completion_days = cint(self.payment_completion_days or 90)
+
+		self.notes = (
+			"Sales Order Payment Terms\n"
+			"1. Plot Application fee is non-refundable.\n"
+			f"2. If the application fee is not paid, the application auto-cancels after {unpaid_days} day(s).\n"
+			f"3. After application fee payment, the reservation remains valid for {paid_days} day(s).\n"
+			"4. Booking fee (advance) is the first payment under this Sales Order.\n"
+			f"5. Remaining balance/installments must be paid within {completion_days} day(s) from Order Date, based on the schedule.\n"
+			"6. Late installments may be marked Overdue and can lead to contract cancellation/termination per LMS policy."
+		)
 
 	def fill_from_plot_application(self):
 		"""Auto-fill SO core fields from linked Plot Application for manual SO creation."""
@@ -240,11 +295,39 @@ class PlotSalesOrder(Document):
 		self.total_contract_value = flt(self.selling_price)
 		total_paid = sum(flt(row.paid_amount) for row in self.payment_schedule)
 		self.total_paid = total_paid
-		self.total_outstanding = flt(self.selling_price) - total_paid
+		total_outstanding = flt(self.selling_price) - total_paid
+		self.total_outstanding = total_outstanding
+		self.payment_progress = self._derive_payment_progress(total_paid, total_outstanding)
 		if flt(self.government_share_percent) > 0:
 			self.government_fee_withheld = (
 				flt(self.selling_price) * flt(self.government_share_percent) / 100
 			)
+
+	def _derive_payment_progress(self, total_paid, total_outstanding):
+		if flt(total_paid) <= 0:
+			return "Unpaid"
+		if flt(total_outstanding) <= 0:
+			return "Fully Paid"
+
+		first_expected = 0.0
+		first_paid = 0.0
+		for row in self.payment_schedule:
+			if cint(row.installment_number or 0) == 1:
+				first_expected = flt(row.expected_amount)
+				first_paid = flt(row.paid_amount)
+				break
+
+		if first_expected > 0 and first_paid >= first_expected:
+			later_paid = sum(
+				flt(row.paid_amount)
+				for row in self.payment_schedule
+				if cint(row.installment_number or 0) > 1
+			)
+			if later_paid > 0:
+				return "Advance + Installments Paid"
+			return "Advance Paid"
+
+		return "Partially Paid"
 
 	# ------------------------------------------------------------------ #
 	#  Submit / Cancel                                                     #
@@ -414,15 +497,60 @@ class PlotSalesOrder(Document):
 		self.db_set("plot_contract", contract.name)
 		return contract.name
 
+	def _sync_linked_contract_schedule_rows(self, contract=None):
+		"""Mirror SO schedule row state into linked contract rows by installment number."""
+		contract_doc = contract
+		if not contract_doc:
+			if not self.plot_contract or not frappe.db.exists("Plot Contract", self.plot_contract):
+				return False
+			contract_doc = frappe.get_doc("Plot Contract", self.plot_contract)
+
+		so_rows = {cint(row.installment_number or 0): row for row in self.payment_schedule}
+		updated = False
+
+		for contract_row in contract_doc.payment_schedule:
+			installment_no = cint(contract_row.installment_number or 0)
+			so_row = so_rows.get(installment_no)
+			if not so_row:
+				continue
+
+			updates = {}
+			if str(contract_row.due_date or "") != str(so_row.due_date or ""):
+				updates["due_date"] = so_row.due_date
+			if flt(contract_row.expected_amount) != flt(so_row.expected_amount):
+				updates["expected_amount"] = flt(so_row.expected_amount)
+			if flt(contract_row.paid_amount) != flt(so_row.paid_amount):
+				updates["paid_amount"] = flt(so_row.paid_amount)
+
+			so_status = so_row.status or "Pending"
+			if (contract_row.status or "Pending") != so_status:
+				updates["status"] = so_status
+
+			contract_si = contract_row.sales_invoice or ""
+			so_si = so_row.sales_invoice or ""
+			if contract_si != so_si:
+				updates["sales_invoice"] = so_si
+
+			if updates:
+				frappe.db.set_value("Plot Contract Payment", contract_row.name, updates)
+				for fieldname, value in updates.items():
+					setattr(contract_row, fieldname, value)
+				updated = True
+
+		return updated
+
 	def _activate_contract_from_first_payment(self):
 		"""Submit the draft contract on first payment and sync its status."""
 		contract_name = self._ensure_draft_contract()
 		contract = frappe.get_doc("Plot Contract", contract_name)
+		self._sync_linked_contract_schedule_rows(contract=contract)
 		if contract.docstatus == 0:
 			contract.submit()
 		contract.reload()
+		self._sync_linked_contract_schedule_rows(contract=contract)
 		contract.sync_payment_status()
-		self.db_set("status", "Converted")
+		if self.status != "Converted":
+			self.db_set("status", "Converted")
 		return contract.name
 
 	def _validate_bank_account(self, bank_account, company):
@@ -703,6 +831,7 @@ class PlotSalesOrder(Document):
 			# Sync revenue recognition on the contract
 			contract = frappe.get_doc("Plot Contract", self.plot_contract)
 			contract.reload()
+			self._sync_linked_contract_schedule_rows(contract=contract)
 			contract.sync_payment_status()
 			frappe.msgprint(
 				f"Payment of TZS {amount:,.0f} confirmed by TCB. "
@@ -752,7 +881,11 @@ class PlotSalesOrder(Document):
 			)
 
 		self.db_set("total_paid", total_paid)
-		self.db_set("total_outstanding", flt(self.selling_price) - total_paid)
+		total_outstanding = flt(self.selling_price) - total_paid
+		self.db_set("total_outstanding", total_outstanding)
+		self.db_set("payment_progress", self._derive_payment_progress(total_paid, total_outstanding))
+		if self.docstatus == 1 and total_paid > 0 and self.status != "Converted":
+			self.db_set("status", "Converted")
 
 	# ------------------------------------------------------------------ #
 	#  Convert to Contract                                                 #

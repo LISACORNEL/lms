@@ -541,6 +541,94 @@ def auto_sync_stale_payment_statuses():
         if si and si.docstatus == 1 and flt(si.outstanding_amount) <= 0:
             affected_sales_orders.add(row.parent)
 
+    # Header drift repair: SO is still Open even though payments already exist.
+    open_paid_sales_orders = frappe.db.get_all(
+        "Plot Sales Order",
+        filters={
+            "docstatus": 1,
+            "status": "Open",
+            "total_paid": [">", 0],
+        },
+        fields=["name"],
+    )
+    for row in open_paid_sales_orders:
+        affected_sales_orders.add(row.name)
+
+    # Progress-label backfill: older rows may still show default 'Unpaid'
+    # until their sync method runs once after field rollout.
+    so_progress_backfill = frappe.db.sql(
+        """
+        select name
+        from `tabPlot Sales Order`
+        where docstatus = 1
+          and total_paid > 0
+          and ifnull(payment_progress, '') in ('', 'Unpaid')
+        """,
+        as_dict=True,
+    )
+    for row in so_progress_backfill:
+        affected_sales_orders.add(row.name)
+
+    contract_progress_backfill = frappe.db.sql(
+        """
+        select name
+        from `tabPlot Contract`
+        where docstatus = 1
+          and total_paid > 0
+          and ifnull(payment_progress, '') in ('', 'Unpaid')
+        """,
+        as_dict=True,
+    )
+    for row in contract_progress_backfill:
+        affected_contracts.add(row.name)
+
+    # Link-gap repair: SO rows have SI links but linked contract rows are still blank.
+    # This can happen when contract draft existed before SO created installment SIs.
+    link_gap_rows = frappe.db.sql(
+        """
+        select distinct
+            c.name  as contract_name,
+            so.name as sales_order_name
+        from `tabPlot Contract` c
+        inner join `tabPlot Sales Order` so
+            on so.name = c.sales_order
+        inner join `tabPlot Contract Payment` cp
+            on cp.parenttype = 'Plot Contract'
+           and cp.parent = c.name
+        inner join `tabPlot Contract Payment` sp
+            on sp.parenttype = 'Plot Sales Order'
+           and sp.parent = so.name
+           and sp.installment_number = cp.installment_number
+        where c.docstatus = 1
+          and so.docstatus = 1
+          and ifnull(cp.sales_invoice, '') = ''
+          and ifnull(sp.sales_invoice, '') != ''
+        """,
+        as_dict=True,
+    )
+
+    for row in link_gap_rows:
+        try:
+            so = frappe.get_doc("Plot Sales Order", row.sales_order_name)
+            if so.docstatus != 1 or so.status not in ("Open", "Converted"):
+                continue
+
+            so._sync_payment_status()
+            affected_sales_orders.add(so.name)
+
+            contract = frappe.get_doc("Plot Contract", row.contract_name)
+            if contract.docstatus != 1:
+                continue
+
+            so._sync_linked_contract_schedule_rows(contract=contract)
+            contract.sync_payment_status()
+            affected_contracts.add(contract.name)
+        except Exception:
+            frappe.log_error(
+                frappe.get_traceback(),
+                f"LMS: Failed link-gap stale sync for SO {row.sales_order_name} / Contract {row.contract_name}",
+            )
+
     for contract_name in affected_contracts:
         try:
             contract = frappe.get_doc("Plot Contract", contract_name)

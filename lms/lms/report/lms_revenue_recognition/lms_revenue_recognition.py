@@ -7,7 +7,8 @@ def execute(filters=None):
 	columns = get_columns()
 	data    = get_data(filters)
 	summary = get_summary(data)
-	return columns, data, None, None, summary
+	chart   = get_chart(data)
+	return columns, data, None, chart, summary
 
 
 def get_columns():
@@ -82,8 +83,30 @@ def get_summary(data):
 	total_margin  = sum(flt(r["gross_margin"]) for r in data)
 	avg_margin    = (total_margin / total_revenue * 100) if total_revenue else 0
 	return [
-		{"label": "Total Revenue Recognized", "value": total_revenue,          "datatype": "Float", "indicator": "Blue"},
-		{"label": "Total COGS",               "value": total_cogs,             "datatype": "Float", "indicator": "Red"},
-		{"label": "Total Gross Margin",       "value": total_margin,           "datatype": "Float", "indicator": "Green"},
-		{"label": "Average Margin %",         "value": round(avg_margin, 1),   "datatype": "Float", "indicator": "Blue"},
+		{"label": "Total Revenue Recognized", "value": total_revenue,          "datatype": "Currency", "indicator": "Blue"},
+		{"label": "Total COGS",               "value": total_cogs,             "datatype": "Currency", "indicator": "Red"},
+		{"label": "Total Gross Margin",       "value": total_margin,           "datatype": "Currency", "indicator": "Green"},
+		{"label": "Average Margin %",         "value": avg_margin,             "datatype": "Percent",  "indicator": "Blue"},
 	]
+
+
+def get_chart(data):
+	if not data:
+		return None
+
+	top_rows = sorted(data, key=lambda d: flt(d.get("revenue")), reverse=True)[:8]
+	if not top_rows:
+		return None
+
+	return {
+		"data": {
+			"labels": [r["contract"] for r in top_rows],
+			"datasets": [
+				{"name": "Revenue", "values": [flt(r["revenue"]) for r in top_rows]},
+				{"name": "COGS", "values": [flt(r["cogs"]) for r in top_rows]},
+				{"name": "Gross Margin", "values": [flt(r["gross_margin"]) for r in top_rows]},
+			],
+		},
+		"type": "bar",
+		"colors": ["#1c7ed6", "#e03131", "#2f9e44"],
+	}

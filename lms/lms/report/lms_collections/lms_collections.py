@@ -7,7 +7,8 @@ def execute(filters=None):
 	columns = get_columns()
 	data    = get_data(filters)
 	summary = get_summary(data)
-	return columns, data, None, None, summary
+	chart   = get_chart(data)
+	return columns, data, None, chart, summary
 
 
 def get_columns():
@@ -77,3 +78,25 @@ def get_summary(data):
 		{"label": "Total Outstanding",       "value": total_outstanding,         "datatype": "Float", "indicator": "Red"},
 		{"label": "Overall Collection Rate", "value": round(overall_rate, 1),    "datatype": "Float", "indicator": "Blue"},
 	]
+
+
+def get_chart(data):
+	if not data:
+		return None
+
+	top_rows = sorted(data, key=lambda d: flt(d.get("total_outstanding")), reverse=True)[:8]
+	if not top_rows:
+		return None
+
+	return {
+		"data": {
+			"labels": [r["customer"] for r in top_rows],
+			"datasets": [
+				{"name": "Collected", "values": [flt(r["total_paid"]) for r in top_rows]},
+				{"name": "Outstanding", "values": [flt(r["total_outstanding"]) for r in top_rows]},
+			],
+		},
+		"type": "bar",
+		"colors": ["#2f9e44", "#e03131"],
+		"barOptions": {"stacked": 1},
+	}

@@ -135,6 +135,13 @@
    "description": "Income account where application fees are posted"
   },
   {
+   "fieldname": "application_fee_receiving_account",
+   "fieldtype": "Link",
+   "label": "Application Fee Receiving Account",
+   "options": "Account",
+   "description": "Default Bank/Cash account where application fee payments are received"
+  },
+  {
    "fieldname": "warehouse_section",
    "fieldtype": "Section Break",
    "label": "Warehouse"
