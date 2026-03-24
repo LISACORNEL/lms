@@ -5,10 +5,13 @@ from frappe.utils import flt, add_days, today, getdate, cint
 from lms.lms.doctype.land_acquisition.land_acquisition import sync_land_acquisition_plot_summary
 from lms.lms.doctype.plot_master.plot_master import PLOT_TYPE_TO_ITEM
 from lms.lms.tcb import (
+	CONTROL_NUMBER_PREFIX,
+	CONTROL_NUMBER_TOTAL_LENGTH,
 	generate_control_number,
 	confirm_payment,
 	register_reference_for_sales_order,
 	decline_reference_for_sales_order,
+	is_valid_control_number,
 )
 
 
@@ -41,6 +44,11 @@ class PlotSalesOrder(Document):
 
 	def validate_control_number_integrity(self):
 		"""Protect control number immutability after assignment."""
+		if self.control_number and not self._is_current_or_legacy_control_number_allowed():
+			frappe.throw(
+				f"TCB Control Number must be {CONTROL_NUMBER_TOTAL_LENGTH} digits, numeric only, and start with {CONTROL_NUMBER_PREFIX}."
+			)
+
 		if not self.name or not frappe.db.exists("Plot Sales Order", self.name):
 			return
 
@@ -62,6 +70,20 @@ class PlotSalesOrder(Document):
 			frappe.throw(
 				"Control Number cannot be cleared for submitted/cancelled Sales Orders."
 			)
+
+	def _is_current_or_legacy_control_number_allowed(self):
+		"""Allow legacy stored references to remain untouched while enforcing the new format for new ones."""
+		if not self.control_number:
+			return True
+
+		if is_valid_control_number(self.control_number):
+			return True
+
+		if not self.name or not frappe.db.exists("Plot Sales Order", self.name):
+			return False
+
+		prior_control = frappe.db.get_value("Plot Sales Order", self.name, "control_number")
+		return bool(prior_control and self.control_number == prior_control)
 
 	def set_default_notes_template(self):
 		"""Prefill customer-facing payment terms for new Sales Orders."""
