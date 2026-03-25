@@ -116,12 +116,13 @@ class PlotApplication(Document):
           - "Expired"   → paid application past its reservation deadline
           - (default)   → unpaid timeout or manual cancel by user
         """
-		# If plot was reserved by this application, release it
+		# If plot was locked by this application, release it
 		if self.status == "Paid":
 			plot_status = frappe.db.get_value("Plot Master", self.plot, "status")
-			if plot_status == "Reserved":
+			if plot_status in ("Pending Advance", "Reserved"):
 				frappe.db.set_value("Plot Master", self.plot, "status", "Available")
 				self._sync_land_acquisition_summary()
+			self._cancel_linked_sales_order_if_safe()
 		
 		reason = getattr(self.flags, "_cancellation_reason", None)
 		if reason == "Expired":
@@ -133,6 +134,29 @@ class PlotApplication(Document):
 		land_acquisition = frappe.db.get_value("Plot Master", self.plot, "land_acquisition")
 		if land_acquisition:
 			sync_land_acquisition_plot_summary(land_acquisition)
+
+	def _cancel_linked_sales_order_if_safe(self):
+		if not self.sales_order or not frappe.db.exists("Sales Order", self.sales_order):
+			return
+
+		so = frappe.get_doc("Sales Order", self.sales_order)
+		if so.docstatus == 0:
+			frappe.delete_doc("Sales Order", so.name, ignore_permissions=True)
+			self.db_set("sales_order", "")
+			return
+
+		plot_invoice = so.get("plot_sales_invoice")
+		if plot_invoice and frappe.db.exists("Sales Invoice", plot_invoice):
+			outstanding, grand_total = frappe.db.get_value(
+				"Sales Invoice",
+				plot_invoice,
+				["outstanding_amount", "grand_total"],
+			)
+			if flt(outstanding) < flt(grand_total):
+				return
+
+		so.cancel()
+		self.db_set("sales_order", "")
 
 	# ------------------------------------------------------------------ #
 	#  Record Application Fee Payment                                      #
@@ -147,11 +171,12 @@ class PlotApplication(Document):
 		  PE submit → Dr Bank/Cash / Cr Accounts Receivable
 
 		After recording:
-		  - Plot status → Reserved
+		  - Plot status → Pending Advance
 		  - Expiry date calculated (payment_date + validity_days)
 		  - Application status → Paid
 		  - Application fee SI is fully settled (Paid)
 		  - Sales Order can be created manually later from this application
+		  - No other application can take the plot while advance is pending
 		"""
 		if self.status != "Submitted":
 			frappe.throw("Application fee can only be recorded on a Submitted application.")
@@ -246,15 +271,15 @@ class PlotApplication(Document):
 		self.db_set("expiry_date", expiry)
 		self.db_set("status", "Paid")
 
-		# Reserve the plot
-		frappe.db.set_value("Plot Master", self.plot, "status", "Reserved")
+		# Lock the plot until first advance payment or expiry
+		frappe.db.set_value("Plot Master", self.plot, "status", "Pending Advance")
 		self._sync_land_acquisition_summary()
 
 		frappe.msgprint(
 			f"Application fee of TZS {fee_amount:,.0f} recorded. "
-			f"Plot {self.plot} reserved until {expiry}. "
+			f"Plot {self.plot} is now in Pending Advance until {expiry}. "
 			f"Sales Invoice {si.name} fully paid via Payment Entry {pe.name}. "
-			"Next: create the Sales Order when terms are ready.",
+			"Next: create the Sales Order and collect the first advance within the validity window.",
 			indicator="green",
 			alert=True,
 		)
@@ -281,32 +306,25 @@ class PlotApplication(Document):
 			)
 
 	# ------------------------------------------------------------------ #
-	#  Create Plot Sales Order                                             #
+	#  Create ERP Sales Order                                              #
 	# ------------------------------------------------------------------ #
 
 	@frappe.whitelist()
-	def create_sales_order(self, booking_fee_percent=None, government_share_percent=None, payment_completion_days=None, notify=1):
-		"""Create a Plot Sales Order from this paid application.
-
-		This keeps the quick path from Plot Application while manual SO creation
-		from Plot Sales Order list also remains available.
-		"""
+	def create_sales_order(self, notify=1):
+		"""Create a draft ERP Sales Order from this paid application."""
 		notify = cint(notify)
-		booking_fee_percent = flt(booking_fee_percent)
-		government_share_percent = flt(government_share_percent)
-		payment_completion_days = cint(payment_completion_days) or 90
 
 		if self.status != "Paid":
 			frappe.throw("A Sales Order can only be created from a Paid application.")
 
-		if self.plot_sales_order and frappe.db.exists("Plot Sales Order", self.plot_sales_order):
+		if self.sales_order and frappe.db.exists("Sales Order", self.sales_order):
 			frappe.throw(
-				f"A Sales Order has already been created: {self.plot_sales_order}"
+				f"A Sales Order has already been created: {self.sales_order}"
 			)
 
 		# Clean stale link if it points to a missing SO.
-		if self.plot_sales_order and not frappe.db.exists("Plot Sales Order", self.plot_sales_order):
-			self.db_set("plot_sales_order", "")
+		if self.sales_order and not frappe.db.exists("Sales Order", self.sales_order):
+			self.db_set("sales_order", "")
 
 		# Check expiry
 		if self.expiry_date and getdate(self.expiry_date) < getdate(today()):
@@ -314,31 +332,50 @@ class PlotApplication(Document):
 				"This application has expired. The plot reservation is no longer valid."
 			)
 
-		if booking_fee_percent <= 0 or booking_fee_percent > 100:
-			frappe.throw("Booking Fee % is required and must be between 0 and 100.")
-		if government_share_percent < 0 or government_share_percent > 100:
-			frappe.throw("Government Share % is required and must be between 0 and 100.")
+		settings = frappe.get_single("LMS Settings")
+		plot = frappe.get_doc("Plot Master", self.plot)
+		payment_completion_days = cint(plot.payment_completion_days or 0)
 		if payment_completion_days <= 0:
-			frappe.throw("Payment Completion Days must be greater than zero.")
+			frappe.throw(f"Plot {plot.name} is missing Payment Completion Days.")
+
+		from lms.lms.doctype.plot_master.plot_master import PLOT_TYPE_TO_ITEM
+		item_code = PLOT_TYPE_TO_ITEM.get(plot.plot_type)
+		if not item_code:
+			frappe.throw(f"No item is mapped for plot type {plot.plot_type}.")
+
+		transaction_date = self.payment_date or today()
+		payment_deadline = add_days(transaction_date, payment_completion_days)
 
 		so = frappe.get_doc({
-			"doctype": "Plot Sales Order",
+			"doctype": "Sales Order",
+			"company": settings.company,
 			"customer": self.customer,
-			"plot": self.plot,
-			"order_date": self.payment_date or today(),
+			"transaction_date": transaction_date,
+			"delivery_date": payment_deadline,
+			"set_warehouse": settings.plot_inventory_warehouse,
+			"plot": plot.name,
+			"land_acquisition": plot.land_acquisition,
+			"acquisition_name": plot.acquisition_name,
 			"plot_application": self.name,
-			"booking_fee_percent": booking_fee_percent,
-			"government_share_percent": government_share_percent,
+			"booking_fee_percent": flt(plot.booking_fee_percent),
+			"government_share_percent": flt(plot.government_share_percent),
 			"payment_completion_days": payment_completion_days,
+			"payment_deadline": payment_deadline,
+			"items": [{
+				"item_code": item_code,
+				"qty": 1,
+				"rate": flt(plot.selling_price),
+				"warehouse": settings.plot_inventory_warehouse,
+				"delivery_date": payment_deadline,
+			}],
 		})
 		so.insert(ignore_permissions=True)
 
-		self.db_set("plot_sales_order", so.name)
-		self.db_set("status", "Converted")
+		self.db_set("sales_order", so.name)
 
 		if notify:
 			frappe.msgprint(
-				f"Plot Sales Order <b>{so.name}</b> created. "
+				f"Sales Order <b>{so.name}</b> created. "
 				"You can now review and submit it.",
 				indicator="green",
 				alert=True,

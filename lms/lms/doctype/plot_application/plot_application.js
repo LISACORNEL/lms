@@ -98,61 +98,28 @@ frappe.ui.form.on('Plot Application', {
 				}, 'Actions');
 			}
 
-			// Optional quick path: create SO directly from a Paid application.
-			if (frm.doc.docstatus === 1 && frm.doc.status === 'Paid' && !frm.doc.plot_sales_order) {
+			// Optional quick path: create ERP Sales Order directly from a Paid application.
+			if (frm.doc.docstatus === 1 && frm.doc.status === 'Paid' && !frm.doc.sales_order) {
 				frm.add_custom_button('Create Sales Order', function() {
-					let d = new frappe.ui.Dialog({
-						title: 'Create Plot Sales Order',
-						fields: [
-							{
-								fieldname: 'booking_fee_percent',
-								fieldtype: 'Percent',
-								label: 'Booking Fee %',
-								reqd: 1
-							},
-							{
-								fieldname: 'government_share_percent',
-								fieldtype: 'Percent',
-								label: 'Government Share %',
-								reqd: 1
-							},
-							{
-								fieldname: 'payment_completion_days',
-								fieldtype: 'Int',
-								label: 'Payment Completion Days',
-								reqd: 1,
-								default: 90
+					frappe.call({
+						method: 'create_sales_order',
+						doc: frm.doc,
+						args: { notify: 1 },
+						freeze: true,
+						freeze_message: 'Creating Sales Order...',
+						callback: function(r) {
+							if (!r.exc) {
+								frm.reload_doc();
 							}
-						],
-						primary_action_label: 'Create Sales Order',
-						primary_action: function(values) {
-							frappe.call({
-								method: 'create_sales_order',
-								doc: frm.doc,
-								args: {
-									booking_fee_percent: values.booking_fee_percent,
-									government_share_percent: values.government_share_percent,
-									payment_completion_days: values.payment_completion_days
-								},
-								freeze: true,
-								freeze_message: 'Creating Sales Order...',
-								callback: function(r) {
-									if (!r.exc) {
-										d.hide();
-										frm.reload_doc();
-									}
-								}
-							});
 						}
 					});
-					d.show();
 				}, 'Actions');
 			}
 
-		// Link to Plot Sales Order if one exists
-		if (frm.doc.plot_sales_order) {
+		// Link to Sales Order if one exists
+		if (frm.doc.sales_order) {
 			frm.add_custom_button('View Sales Order', function() {
-				frappe.set_route('Form', 'Plot Sales Order', frm.doc.plot_sales_order);
+				frappe.set_route('Form', 'Sales Order', frm.doc.sales_order);
 			}, 'Actions');
 		}
 	},

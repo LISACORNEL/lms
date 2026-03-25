@@ -112,6 +112,39 @@
    "label": "Title Deed Number"
   },
   {
+   "fieldname": "sales_defaults_section",
+   "fieldtype": "Section Break",
+   "label": "Sales Defaults"
+  },
+  {
+   "fieldname": "booking_fee_percent",
+   "fieldtype": "Percent",
+   "label": "Booking Fee %",
+   "reqd": 1,
+   "default": "10",
+   "description": "Default booking fee percentage for plots created under this acquisition"
+  },
+  {
+   "fieldname": "government_share_percent",
+   "fieldtype": "Percent",
+   "label": "Government Share %",
+   "reqd": 1,
+   "default": "0",
+   "description": "Default government share percentage for plots created under this acquisition"
+  },
+  {
+   "fieldname": "sales_defaults_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_completion_days",
+   "fieldtype": "Int",
+   "label": "Payment Completion Days",
+   "reqd": 1,
+   "default": "30",
+   "description": "Default number of days allowed to complete plot payment after the fee stage"
+  },
+  {
    "fieldname": "seller_section",
    "fieldtype": "Section Break",
    "label": "Seller Information"
@@ -242,7 +275,7 @@
    "fieldtype": "Int",
    "label": "Reserved Plots",
    "read_only": 1,
-   "description": "Plots currently under active contract"
+   "description": "Plots currently locked for a customer or under active contract"
   },
   {
    "fieldname": "delivered_plots",

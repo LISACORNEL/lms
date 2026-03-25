@@ -1,6 +1,6 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import today, flt
+from frappe.utils import today, flt, cint
 
 
 @frappe.whitelist()
@@ -28,7 +28,11 @@ def sync_land_acquisition_plot_summary(land_acquisition):
     summary = {
         "total_plots": total_plots,
         "available_plots": int(status_map.get("Available", 0)),
-        "reserved_plots": int(status_map.get("Reserved", 0)),
+        "reserved_plots": int(
+            status_map.get("Pending Advance", 0)
+            + status_map.get("Reserved", 0)
+            + status_map.get("Ready for Handover", 0)
+        ),
         "delivered_plots": int(status_map.get("Delivered", 0) + status_map.get("Title Closed", 0)),
     }
 
@@ -55,6 +59,7 @@ class LandAcquisition(Document):
         self.calculate_cost_tzs()
         self.validate_cost()
         self.validate_area()
+        self.validate_sales_defaults()
 
     def calculate_total_from_items(self):
         self.total_acquisition_cost = sum(flt(row.amount) for row in self.cost_items)
@@ -71,6 +76,16 @@ class LandAcquisition(Document):
     def validate_area(self):
         if flt(self.total_area_sqm) <= 0:
             frappe.throw("Total Area must be greater than zero.")
+
+    def validate_sales_defaults(self):
+        if flt(self.booking_fee_percent) < 0 or flt(self.booking_fee_percent) > 100:
+            frappe.throw("Booking Fee % must be between 0 and 100.")
+
+        if flt(self.government_share_percent) < 0 or flt(self.government_share_percent) > 100:
+            frappe.throw("Government Share % must be between 0 and 100.")
+
+        if cint(self.payment_completion_days) <= 0:
+            frappe.throw("Payment Completion Days must be greater than zero.")
 
     def on_submit(self):
         self.db_set("status", "Pending Approval")

@@ -117,10 +117,10 @@
   {
    "fieldname": "sales_order",
    "fieldtype": "Link",
-   "label": "Plot Sales Order",
-   "options": "Plot Sales Order",
+   "label": "Sales Order",
+   "options": "Sales Order",
    "read_only": 1,
-   "description": "Linked Sales Order — auto-set when contract is created from a Plot Sales Order"
+   "description": "Linked ERP Sales Order — auto-set when contract is created from the application flow"
   },
   {
    "fieldname": "financials_section",

@@ -87,7 +87,10 @@ required_apps = ["erpnext"]
 
 # Migration
 # ---------
-after_migrate = ["lms.migrate.reload_lms_doctypes"]
+after_migrate = [
+	"lms.migrate.reload_lms_doctypes",
+	"lms.custom_fields.ensure_lms_custom_fields",
+]
 
 # Uninstallation
 # ------------
@@ -141,13 +144,16 @@ after_migrate = ["lms.migrate.reload_lms_doctypes"]
 # ---------------
 # Hook on document methods and events
 
-# doc_events = {
-# 	"*": {
-# 		"on_update": "method",
-# 		"on_cancel": "method",
-# 		"on_trash": "method"
-# 	}
-# }
+doc_events = {
+	"Sales Order": {
+		"validate": "lms.sales_order_hooks.validate_sales_order",
+		"on_submit": "lms.sales_order_hooks.on_submit_sales_order",
+		"on_cancel": "lms.sales_order_hooks.on_cancel_sales_order",
+	},
+	"Payment Entry": {
+		"on_submit": "lms.payment_sync.on_submit_payment_entry",
+	},
+}
 
 # Scheduled Tasks
 # ---------------

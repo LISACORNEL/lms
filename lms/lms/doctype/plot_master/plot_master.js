@@ -14,7 +14,9 @@ frappe.ui.form.on('Plot Master', {
 		// Color the status indicator
 		const colors = {
 			'Available': 'green',
+			'Pending Advance': 'yellow',
 			'Reserved': 'orange',
+			'Ready for Handover': 'cyan',
 			'Delivered': 'blue',
 			'Title Closed': 'darkgreen'
 		};

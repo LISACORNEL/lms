@@ -58,6 +58,18 @@ class PlotContract(Document):
 
 	def _sales_order_has_any_confirmed_payment(self, so_doc):
 		"""True when any linked SO installment SI has been partially/fully paid."""
+		if so_doc.doctype == "Sales Order":
+			plot_invoice = so_doc.get("plot_sales_invoice")
+			if not plot_invoice or not frappe.db.exists("Sales Invoice", plot_invoice):
+				return False
+			si = frappe.db.get_value(
+				"Sales Invoice",
+				plot_invoice,
+				["docstatus", "outstanding_amount", "grand_total"],
+				as_dict=True,
+			)
+			return bool(si and si.docstatus == 1 and flt(si.outstanding_amount) < flt(si.grand_total))
+
 		if flt(so_doc.total_paid) > 0:
 			return True
 
@@ -88,13 +100,16 @@ class PlotContract(Document):
 		if not self.sales_order:
 			return
 
-		if not frappe.db.exists("Plot Sales Order", self.sales_order):
-			frappe.throw(f"Linked Plot Sales Order {self.sales_order} was not found.")
+		if frappe.db.exists("Sales Order", self.sales_order):
+			so_doc = frappe.get_doc("Sales Order", self.sales_order)
+		elif frappe.db.exists("Plot Sales Order", self.sales_order):
+			so_doc = frappe.get_doc("Plot Sales Order", self.sales_order)
+		else:
+			frappe.throw(f"Linked Sales Order {self.sales_order} was not found.")
 
-		so_doc = frappe.get_doc("Plot Sales Order", self.sales_order)
 		if so_doc.docstatus != 1:
 			frappe.throw(
-				f"Linked Plot Sales Order {so_doc.name} is not submitted. "
+				f"Linked Sales Order {so_doc.name} is not submitted. "
 				"Submit the Sales Order first."
 			)
 
@@ -109,6 +124,20 @@ class PlotContract(Document):
 				f"Cannot submit contract {self.name} before first payment on Sales Order "
 				f"{so_doc.name}. Record payment on the Sales Order first."
 			)
+
+	def _get_standard_sales_order_doc(self):
+		if not self.sales_order or not frappe.db.exists("Sales Order", self.sales_order):
+			return None
+		return frappe.get_doc("Sales Order", self.sales_order)
+
+	def _get_standard_sales_order_invoice_name(self):
+		so_doc = self._get_standard_sales_order_doc()
+		if not so_doc:
+			return ""
+		invoice_name = so_doc.get("plot_sales_invoice") or ""
+		if invoice_name and frappe.db.exists("Sales Invoice", invoice_name):
+			return invoice_name
+		return ""
 
 	def fill_selling_price(self):
 		if self.plot:
@@ -383,6 +412,8 @@ class PlotContract(Document):
 			)
 
 	def _sync_linked_sales_order_status(self):
+		if self.sales_order and frappe.db.exists("Sales Order", self.sales_order):
+			return
 		if not self.sales_order or not frappe.db.exists("Plot Sales Order", self.sales_order):
 			return
 		so = frappe.get_doc("Plot Sales Order", self.sales_order)
@@ -598,7 +629,9 @@ class PlotContract(Document):
 		return pe.name
 
 	def sync_payment_status(self):
-		"""Re-read each SI's outstanding amount and update child rows + contract totals."""
+		"""Sync contract totals and status from either the legacy row invoices or the single SO invoice."""
+		if self._get_standard_sales_order_invoice_name():
+			return self._sync_standard_sales_order_payment_status()
 		now = getdate(today())
 		total_paid = 0.0
 
@@ -642,7 +675,7 @@ class PlotContract(Document):
 
 		if total_outstanding <= 0:
 			self.db_set("contract_status", "Completed")
-			frappe.db.set_value("Plot Master", self.plot, "status", "Delivered")
+			frappe.db.set_value("Plot Master", self.plot, "status", "Ready for Handover")
 			self._sync_land_acquisition_summary()
 
 			# Post government fee JE (idempotent — skips if already done)
@@ -650,13 +683,92 @@ class PlotContract(Document):
 			self.reload()
 			je_name = self._post_completion_entries(settings)
 
-			msg = f"Contract fully paid. Plot {self.plot} marked as Delivered."
+			msg = f"Contract fully paid. Plot {self.plot} marked as Ready for Handover."
 			if je_name:
 				msg += f" Government fee posted — Journal Entry: {je_name}."
 			frappe.msgprint(msg, indicator="green", alert=True)
 
 		elif total_paid > 0:
 			self.db_set("contract_status", "Ongoing")
+
+	def _sync_standard_sales_order_payment_status(self):
+		"""Sync a contract driven by one standard Sales Order invoice."""
+		invoice_name = self._get_standard_sales_order_invoice_name()
+		if not invoice_name:
+			return
+
+		si = frappe.db.get_value(
+			"Sales Invoice",
+			invoice_name,
+			["docstatus", "grand_total", "outstanding_amount"],
+			as_dict=True,
+		)
+		if not si or si.docstatus != 1:
+			return
+
+		total_paid = max(0.0, flt(si.grand_total) - flt(si.outstanding_amount))
+		total_outstanding = max(0.0, flt(si.outstanding_amount))
+
+		if total_paid > 0 and self.docstatus == 0:
+			self.submit()
+			self.reload()
+
+		self._sync_single_invoice_schedule_rows(total_paid)
+		self.db_set("total_paid", total_paid)
+		self.db_set("total_outstanding", total_outstanding)
+		self.db_set("payment_progress", self._derive_payment_progress(total_paid, total_outstanding))
+
+		so_doc = self._get_standard_sales_order_doc()
+		if so_doc and so_doc.get("plot_application"):
+			app_status = frappe.db.get_value("Plot Application", so_doc.plot_application, "status")
+			if total_paid > 0 and app_status == "Paid":
+				frappe.db.set_value("Plot Application", so_doc.plot_application, "status", "Converted")
+
+		if total_outstanding <= 0 and self.docstatus == 1:
+			self.db_set("contract_status", "Completed")
+			current_plot_status = frappe.db.get_value("Plot Master", self.plot, "status")
+			if current_plot_status not in ("Delivered", "Title Closed"):
+				frappe.db.set_value("Plot Master", self.plot, "status", "Ready for Handover")
+			self._sync_land_acquisition_summary()
+
+			settings = frappe.get_single("LMS Settings")
+			self.reload()
+			je_name = self._post_completion_entries(settings)
+
+			msg = f"Contract fully paid. Plot {self.plot} marked as Ready for Handover."
+			if je_name:
+				msg += f" Government fee posted — Journal Entry: {je_name}."
+			frappe.msgprint(msg, indicator="green", alert=True)
+
+		elif total_paid > 0 and self.docstatus == 1:
+			self.db_set("contract_status", "Ongoing")
+			if frappe.db.get_value("Plot Master", self.plot, "status") == "Pending Advance":
+				frappe.db.set_value("Plot Master", self.plot, "status", "Reserved")
+				self._sync_land_acquisition_summary()
+
+	def _sync_single_invoice_schedule_rows(self, total_paid):
+		now = getdate(today())
+		remaining_paid = flt(total_paid)
+
+		for row in sorted(self.payment_schedule, key=lambda d: cint(d.installment_number or 0)):
+			expected = flt(row.expected_amount)
+			paid_amount = min(expected, max(remaining_paid, 0.0))
+			remaining_paid -= paid_amount
+
+			if paid_amount >= expected and expected > 0:
+				status = "Paid"
+			elif getdate(str(row.due_date)) < now:
+				status = "Overdue"
+			else:
+				status = "Pending"
+
+			row.paid_amount = paid_amount
+			row.status = status
+			frappe.db.set_value(
+				"Plot Contract Payment",
+				row.name,
+				{"paid_amount": paid_amount, "status": status},
+			)
 
 	# ------------------------------------------------------------------ #
 	#  Contract termination                                                #

@@ -28,7 +28,7 @@
   "sales_invoice",
   "payment_entry",
   "links_section",
-  "plot_sales_order",
+  "sales_order",
   "notes_section",
   "notes",
   "amended_from"
@@ -118,14 +118,14 @@
    "fieldtype": "Int",
    "label": "Post-Payment Validity (Days)",
    "read_only": 1,
-   "description": "Auto-filled from LMS Settings (Application Fee Validity Days)"
+   "description": "Auto-filled from LMS Settings (Application Fee Validity Days) for the first Sales Order advance window"
   },
   {
    "fieldname": "expiry_date",
    "fieldtype": "Date",
    "label": "Expiry Date",
    "read_only": 1,
-   "description": "Auto-calculated: payment date + validity days. Plot released back to Available after this date."
+   "description": "Auto-calculated: payment date + validity days. Plot stays Pending Advance until this date, then returns to Available if no advance is received."
   },
   {
    "fieldname": "fee_section",
@@ -170,12 +170,12 @@
    "label": "Linked Documents"
   },
   {
-   "fieldname": "plot_sales_order",
+   "fieldname": "sales_order",
    "fieldtype": "Link",
-   "label": "Plot Sales Order",
-   "options": "Plot Sales Order",
+   "label": "Sales Order",
+   "options": "Sales Order",
    "read_only": 1,
-   "description": "Auto-created when you click Create Sales Order after payment"
+   "description": "ERP Sales Order created after application fee payment"
   },
   {
    "fieldname": "notes_section",

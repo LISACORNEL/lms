@@ -61,7 +61,10 @@ def notify_plot_applications_expiring_in_24h():
       - Before payment: Submitted applications nearing unpaid timeout
       - After payment: Paid applications nearing reservation expiry
     """
+    settings = frappe.get_single("LMS Settings")
     target_date = add_days(today(), 1)
+    unpaid_days = int(settings.unpaid_application_expiry_days or 3)
+    paid_days = int(settings.application_fee_validity_days or 7)
 
     unpaid_due = frappe.db.sql(
         """
@@ -70,27 +73,34 @@ def notify_plot_applications_expiring_in_24h():
             plot,
             customer,
             application_date,
-            ifnull(unpaid_validity_days, 0) as unpaid_validity_days,
-            date_add(application_date, interval ifnull(unpaid_validity_days, 0) day) as expiry_date
+            %s as unpaid_validity_days,
+            date_add(application_date, interval %s day) as expiry_date
         from `tabPlot Application`
         where docstatus = 1
           and status = 'Submitted'
-          and date_add(application_date, interval ifnull(unpaid_validity_days, 0) day) = %s
+          and date_add(application_date, interval %s day) = %s
         order by application_date asc, name asc
         """,
-        (target_date,),
+        (unpaid_days, unpaid_days, unpaid_days, target_date),
         as_dict=True,
     )
 
-    paid_due = frappe.db.get_all(
-        "Plot Application",
-        filters={
-            "docstatus": 1,
-            "status": "Paid",
-            "expiry_date": target_date,
-        },
-        fields=["name", "plot", "customer", "expiry_date"],
-        order_by="expiry_date asc, name asc",
+    paid_due = frappe.db.sql(
+        """
+        select
+            name,
+            plot,
+            customer,
+            date_add(payment_date, interval %s day) as expiry_date
+        from `tabPlot Application`
+        where docstatus = 1
+          and status = 'Paid'
+          and payment_date is not null
+          and date_add(payment_date, interval %s day) = %s
+        order by payment_date asc, name asc
+        """,
+        (paid_days, paid_days, target_date),
+        as_dict=True,
     )
 
     if not unpaid_due and not paid_due:
@@ -250,16 +260,25 @@ def auto_expire_paid_applications_past_deadline():
 
     Non-refundable — no reversal of the application fee SI.
     """
+    settings = frappe.get_single("LMS Settings")
     today_date = getdate(today())
+    validity_days = int(settings.application_fee_validity_days or 7)
 
-    expired_apps = frappe.db.get_all(
-        "Plot Application",
-        filters={
-            "docstatus": 1,
-            "status": "Paid",
-            "expiry_date": ["<", today_date],
-        },
-        fields=["name", "plot", "expiry_date"],
+    expired_apps = frappe.db.sql(
+        """
+        select
+            name,
+            plot,
+            date_add(payment_date, interval %s day) as expiry_date
+        from `tabPlot Application`
+        where docstatus = 1
+          and status = 'Paid'
+          and payment_date is not null
+          and date_add(payment_date, interval %s day) < %s
+        order by payment_date asc, name asc
+        """,
+        (validity_days, validity_days, today_date),
+        as_dict=True,
     )
 
     expired_count = 0

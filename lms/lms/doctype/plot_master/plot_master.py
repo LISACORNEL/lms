@@ -16,6 +16,7 @@ class PlotMaster(Document):
 	def validate(self):
 		self.validate_land_acquisition()
 		self.fill_acquisition_name()
+		self.fill_sales_defaults()
 		self.fill_allocated_cost()
 		self.validate_duplicate_plot_number()
 		self.validate_selling_price()
@@ -27,6 +28,24 @@ class PlotMaster(Document):
 		self.acquisition_name = frappe.db.get_value(
 			"Land Acquisition", self.land_acquisition, "acquisition_name"
 		) or ""
+
+	def fill_sales_defaults(self):
+		if not self.land_acquisition:
+			self.booking_fee_percent = 0
+			self.government_share_percent = 0
+			self.payment_completion_days = 0
+			return
+
+		defaults = frappe.db.get_value(
+			"Land Acquisition",
+			self.land_acquisition,
+			["booking_fee_percent", "government_share_percent", "payment_completion_days"],
+			as_dict=True,
+		) or {}
+
+		self.booking_fee_percent = flt(defaults.get("booking_fee_percent"))
+		self.government_share_percent = flt(defaults.get("government_share_percent"))
+		self.payment_completion_days = int(defaults.get("payment_completion_days") or 0)
 
 	def validate_land_acquisition(self):
 		if not self.land_acquisition:

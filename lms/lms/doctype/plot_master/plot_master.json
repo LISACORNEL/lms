@@ -56,7 +56,7 @@
    "fieldname": "status",
    "fieldtype": "Select",
    "label": "Status",
-   "options": "Available\nReserved\nDelivered\nTitle Closed",
+   "options": "Available\nPending Advance\nReserved\nReady for Handover\nDelivered\nTitle Closed",
    "default": "Available",
    "read_only": 1
   },
@@ -89,6 +89,36 @@
    "label": "Selling Price (TZS)",
    "reqd": 1,
    "description": "Price this plot will be sold for"
+  },
+  {
+   "fieldname": "sales_defaults_section",
+   "fieldtype": "Section Break",
+   "label": "Sales Defaults"
+  },
+  {
+   "fieldname": "booking_fee_percent",
+   "fieldtype": "Percent",
+   "label": "Booking Fee %",
+   "read_only": 1,
+   "description": "Auto-filled snapshot from Land Acquisition"
+  },
+  {
+   "fieldname": "government_share_percent",
+   "fieldtype": "Percent",
+   "label": "Government Share %",
+   "read_only": 1,
+   "description": "Auto-filled snapshot from Land Acquisition"
+  },
+  {
+   "fieldname": "sales_defaults_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payment_completion_days",
+   "fieldtype": "Int",
+   "label": "Payment Completion Days",
+   "read_only": 1,
+   "description": "Auto-filled snapshot from Land Acquisition"
   },
   {
    "fieldname": "references_section",
