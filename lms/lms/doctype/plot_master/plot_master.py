@@ -5,9 +5,9 @@ from frappe.utils import flt
 from lms.lms.doctype.land_acquisition.land_acquisition import sync_land_acquisition_plot_summary
 
 PLOT_TYPE_TO_ITEM = {
-	"Residential": "RESIDENTIAL PLOTS",
-	"Commercial": "COMMERCIAL PLOTS",
-	"Mixed-Use": "MIXED USED PLOTS",
+	"Residential": "RESIDENTIAL PLOT",
+	"Commercial": "COMMERCIAL PLOT",
+	"Mixed-Use": "MIXED USED PLOT",
 }
 
 
