@@ -34,8 +34,8 @@ class PlotContract(Document):
 	def validate_plot_available(self):
 		if not self.plot:
 			return
-		# Skip check when contract is auto-created from a Plot Sales Order —
-		# the SO already validated and reserved the plot.
+		# Skip check when contract is auto-created from a Sales Order —
+		# the SO already validated the plot/application flow.
 		if self.sales_order or self.flags.get("from_sales_order"):
 			return
 		if not frappe.db.exists("Plot Contract", self.name):
@@ -57,55 +57,26 @@ class PlotContract(Document):
 					)
 
 	def _sales_order_has_any_confirmed_payment(self, so_doc):
-		"""True when any linked SO installment SI has been partially/fully paid."""
-		if so_doc.doctype == "Sales Order":
-			plot_invoice = so_doc.get("plot_sales_invoice")
-			if not plot_invoice or not frappe.db.exists("Sales Invoice", plot_invoice):
-				return False
-			si = frappe.db.get_value(
-				"Sales Invoice",
-				plot_invoice,
-				["docstatus", "outstanding_amount", "grand_total"],
-				as_dict=True,
-			)
-			return bool(si and si.docstatus == 1 and flt(si.outstanding_amount) < flt(si.grand_total))
-
-		if flt(so_doc.total_paid) > 0:
-			return True
-
-		so_rows = frappe.db.get_all(
-			"Plot Contract Payment",
-			filters={
-				"parenttype": "Plot Sales Order",
-				"parent": so_doc.name,
-				"sales_invoice": ["!=", ""],
-			},
-			fields=["sales_invoice", "expected_amount"],
+		"""True when the linked LMS plot Sales Invoice has been partially/fully paid."""
+		plot_invoice = so_doc.get("plot_sales_invoice")
+		if not plot_invoice or not frappe.db.exists("Sales Invoice", plot_invoice):
+			return False
+		si = frappe.db.get_value(
+			"Sales Invoice",
+			plot_invoice,
+			["docstatus", "outstanding_amount", "grand_total"],
+			as_dict=True,
 		)
-		for row in so_rows:
-			si = frappe.db.get_value(
-				"Sales Invoice",
-				row.sales_invoice,
-				["docstatus", "outstanding_amount"],
-				as_dict=True,
-			)
-			if not si or si.docstatus != 1:
-				continue
-			if flt(si.outstanding_amount) < flt(row.expected_amount):
-				return True
-		return False
+		return bool(si and si.docstatus == 1 and flt(si.outstanding_amount) < flt(si.grand_total))
 
 	def _validate_sales_order_first_payment_gate(self):
 		"""Contracts linked to SO can only be activated after first SO payment."""
 		if not self.sales_order:
 			return
 
-		if frappe.db.exists("Sales Order", self.sales_order):
-			so_doc = frappe.get_doc("Sales Order", self.sales_order)
-		elif frappe.db.exists("Plot Sales Order", self.sales_order):
-			so_doc = frappe.get_doc("Plot Sales Order", self.sales_order)
-		else:
+		if not frappe.db.exists("Sales Order", self.sales_order):
 			frappe.throw(f"Linked Sales Order {self.sales_order} was not found.")
+		so_doc = frappe.get_doc("Sales Order", self.sales_order)
 
 		if so_doc.docstatus != 1:
 			frappe.throw(
@@ -166,7 +137,7 @@ class PlotContract(Document):
 		Only runs while the document is still in Draft — once submitted,
 		rows are managed by sync_payment_status() after each payment.
 
-		Skipped when contract is auto-created from a Plot Sales Order —
+		Skipped when contract is auto-created from a Sales Order —
 		the schedule (with SI links) is copied directly from the SO.
 
 		Schedule:
@@ -412,13 +383,7 @@ class PlotContract(Document):
 			)
 
 	def _sync_linked_sales_order_status(self):
-		if self.sales_order and frappe.db.exists("Sales Order", self.sales_order):
-			return
-		if not self.sales_order or not frappe.db.exists("Plot Sales Order", self.sales_order):
-			return
-		so = frappe.get_doc("Plot Sales Order", self.sales_order)
-		if so.docstatus == 1 and so.status in ("Open", "Converted"):
-			so._sync_payment_status()
+		return
 
 	# ------------------------------------------------------------------ #
 	#  GL Entry helpers                                                    #

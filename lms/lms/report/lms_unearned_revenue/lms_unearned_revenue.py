@@ -14,6 +14,7 @@ def execute(filters=None):
 def get_columns():
 	return [
 		{"label": "Contract",                  "fieldname": "contract",          "fieldtype": "Link",    "options": "Plot Contract", "width": 150},
+		{"label": "Sales Order",               "fieldname": "sales_order",       "fieldtype": "Link",    "options": "Sales Order",   "width": 150},
 		{"label": "Customer",                  "fieldname": "customer",          "fieldtype": "Link",    "options": "Customer",      "width": 190},
 		{"label": "Plot",                      "fieldname": "plot",              "fieldtype": "Link",    "options": "Plot Master",   "width": 130},
 		{"label": "Contract Date",             "fieldname": "contract_date",     "fieldtype": "Date",                                "width": 120},
@@ -39,6 +40,7 @@ def get_data(filters):
 	rows = frappe.db.sql(f"""
 		SELECT
 			name             AS contract,
+			sales_order,
 			customer,
 			plot,
 			contract_date,
@@ -58,6 +60,7 @@ def get_data(filters):
 		pct   = (paid / price * 100) if price else 0
 		data.append({
 			"contract":          row.contract,
+			"sales_order":       row.sales_order,
 			"customer":          row.customer,
 			"plot":              row.plot,
 			"contract_date":     row.contract_date,

@@ -45,6 +45,14 @@
    "read_only": 1
   },
   {
+   "fieldname": "delivery_note",
+   "fieldtype": "Link",
+   "label": "Delivery Note",
+   "options": "Delivery Note",
+   "read_only": 1,
+   "description": "Created automatically on submit to reduce serialized plot stock"
+  },
+  {
    "fieldname": "plot_section",
    "fieldtype": "Section Break",
    "label": "Plot and Contract Information"

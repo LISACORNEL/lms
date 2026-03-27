@@ -34,7 +34,7 @@ frappe.query_reports["LMS Business Trend"] = {
 			return `<span style="font-weight:600;color:#2f4f4f;">${formatted}</span>`;
 		}
 
-		if (column.fieldname === "new_contract_value" || column.fieldname === "revenue_collected") {
+		if (column.fieldname === "new_contract_value" || column.fieldname === "cash_collected") {
 			return `<span style="font-weight:700;color:#1c7ed6;">${formatted}</span>`;
 		}
 

@@ -16,7 +16,7 @@ frappe.query_reports["LMS Plot Inventory"] = {
 			fieldname: "status",
 			label: "Status",
 			fieldtype: "Select",
-			options: "\nAvailable\nReserved\nDelivered\nTitle Closed"
+			options: "\nAvailable\nPending Advance\nReserved\nReady for Handover\nDelivered\nTitle Closed"
 		}
 	],
 	formatter: function (value, row, column, data, default_formatter) {
@@ -29,7 +29,9 @@ frappe.query_reports["LMS Plot Inventory"] = {
 		if (column.fieldname === "status") {
 			const styles = {
 				"Available": "background:#e6fcf0;color:#1f7a3f;",
+				"Pending Advance": "background:#fff9db;color:#8f5a00;",
 				"Reserved": "background:#fff4e6;color:#9c5c00;",
+				"Ready for Handover": "background:#e3fafc;color:#0b7285;",
 				"Delivered": "background:#e7f5ff;color:#0b5cab;",
 				"Title Closed": "background:#f3e8ff;color:#6b21a8;"
 			};

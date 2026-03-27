@@ -24,19 +24,17 @@ def daily():
     Execution order matters:
       1. Send 24h warnings for applications nearing expiry
       2. Cancel stale unpaid applications  (free up plots held by non-payers)
-      3. Expire paid applications past deadline  (free up plots where buyer didn't proceed)
-      4. Cancel stale open sales orders with no first payment
-      5. Submit due installment invoices  (make SIs claimable on their due date)
-      6. Mark overdue installments  (flag missed payments)
-      7. Auto-terminate contracts with overdue installments
-      8. Sync stale payment statuses  (fix drift from external SI/PE actions)
+      3. Expire paid applications past deadline  (also cancels unpaid linked Sales Orders)
+      4. Cancel stale LMS Sales Orders with no first payment  (backstop cleanup)
+      5. Mark overdue installments  (flag missed payments against the single invoice schedule)
+      6. Auto-terminate contracts with overdue installments
+      7. Sync stale payment statuses  (fix drift from external SI/PE actions)
     """
     jobs = [
         ("notify_plot_applications_expiring_in_24h", notify_plot_applications_expiring_in_24h),
         ("auto_cancel_stale_unpaid_applications", auto_cancel_stale_unpaid_applications),
         ("auto_expire_paid_applications_past_deadline", auto_expire_paid_applications_past_deadline),
         ("auto_cancel_stale_open_sales_orders_without_payment", auto_cancel_stale_open_sales_orders_without_payment),
-        ("auto_submit_due_installment_invoices", auto_submit_due_installment_invoices),
         ("auto_mark_overdue_installments", auto_mark_overdue_installments),
         ("auto_terminate_contracts_with_overdue_installments", auto_terminate_contracts_with_overdue_installments),
         ("auto_sync_stale_payment_statuses", auto_sync_stale_payment_statuses),
@@ -308,43 +306,65 @@ def auto_expire_paid_applications_past_deadline():
 
 
 def auto_cancel_stale_open_sales_orders_without_payment():
-    """Cancel Open Sales Orders with no confirmed payment past validity window.
+    """Cancel LMS ERP Sales Orders with no first payment after the paid-app window.
 
-    Uses LMS Settings `Application Fee Validity (Days)` to avoid duplicate
-    configuration: if no SO payment is received in that window, cancel SO,
-    cancel unpaid SO invoices, and release the plot.
+    This is a backstop in case a paid Plot Application somehow remains open past
+    its validity window without `auto_expire_paid_applications_past_deadline`
+    cleaning it up first.
     """
     settings = frappe.get_single("LMS Settings")
     validity_days = int(settings.application_fee_validity_days or 7)
-    cutoff_date = add_days(today(), -validity_days)
+    today_date = getdate(today())
 
-    stale_orders = frappe.db.get_all(
-        "Plot Sales Order",
-        filters={
-            "docstatus": 1,
-            "status": "Open",
-            "order_date": ["<=", cutoff_date],
-        },
-        fields=["name", "plot", "customer", "order_date"],
+    stale_orders = frappe.db.sql(
+        """
+        select
+            so.name,
+            so.plot,
+            so.customer,
+            so.plot_application,
+            date_add(app.payment_date, interval %s day) as expiry_date
+        from `tabSales Order` so
+        inner join `tabPlot Application` app
+            on app.name = so.plot_application
+        where so.docstatus = 1
+          and ifnull(so.plot_application, '') != ''
+          and app.docstatus = 1
+          and app.status = 'Paid'
+          and app.payment_date is not null
+          and date_add(app.payment_date, interval %s day) < %s
+        order by app.payment_date asc, so.name asc
+        """,
+        (validity_days, validity_days, today_date),
+        as_dict=True,
     )
 
     cancelled_count = 0
     for row in stale_orders:
         try:
-            so = frappe.get_doc("Plot Sales Order", row.name)
-            if so._has_any_payment_received():
+            so = frappe.get_doc("Sales Order", row.name)
+            invoice_name = so.get("plot_sales_invoice")
+            if invoice_name and frappe.db.exists("Sales Invoice", invoice_name):
+                outstanding, grand_total = frappe.db.get_value(
+                    "Sales Invoice",
+                    invoice_name,
+                    ["outstanding_amount", "grand_total"],
+                )
+                if flt(outstanding) < flt(grand_total):
+                    continue
+            if frappe.db.get_value("Plot Application", row.plot_application, "docstatus") != 1:
                 continue
             so.flags.ignore_permissions = True
             so.cancel()
             cancelled_count += 1
             frappe.logger("lms").info(
-                f"Auto-cancelled stale SO {row.name} (plot {row.plot}, customer {row.customer}) "
+                f"Auto-cancelled stale Sales Order {row.name} (plot {row.plot}, customer {row.customer}) "
                 f"— no payment received within {validity_days} days"
             )
         except Exception:
             frappe.log_error(
                 frappe.get_traceback(),
-                f"LMS: Failed to auto-cancel Plot Sales Order {row.name}",
+                f"LMS: Failed to auto-cancel Sales Order {row.name}",
             )
 
     if cancelled_count:
@@ -417,8 +437,8 @@ def auto_submit_due_installment_invoices():
 def auto_mark_overdue_installments():
     """Flip Pending installment rows to Overdue once their due date has passed.
 
-    Runs after auto_submit_due_installment_invoices so newly submitted SIs
-    are included in the overdue scan.
+    In the single-invoice flow, rows are milestone trackers only. This job
+    marks them overdue once their due date passes and the milestone is still unpaid.
     """
     today_date = getdate(today())
 
@@ -512,146 +532,57 @@ def auto_terminate_contracts_with_overdue_installments():
 
 
 def auto_sync_stale_payment_statuses():
-    """Resync SO/Contract rows whose linked SIs are already settled.
-
-    This heals drift when payments are posted directly on Sales Invoices or
-    Payment Entries outside LMS helper methods.
-    """
+    """Resync LMS contracts against the single ERP Sales Order invoice."""
     affected_contracts = set()
-    affected_sales_orders = set()
 
-    # Contracts: non-Paid rows where linked SI is already fully paid.
-    contract_rows = frappe.db.get_all(
-        "Plot Contract Payment",
-        filters={
-            "parenttype": "Plot Contract",
-            "status": ["!=", "Paid"],
-            "sales_invoice": ["!=", ""],
-        },
-        fields=["parent", "sales_invoice"],
-    )
-    for row in contract_rows:
-        si = frappe.db.get_value(
-            "Sales Invoice",
-            row.sales_invoice,
-            ["docstatus", "outstanding_amount"],
-            as_dict=True,
-        )
-        if si and si.docstatus == 1 and flt(si.outstanding_amount) <= 0:
-            affected_contracts.add(row.parent)
-
-    # Sales Orders: same check for SO child rows.
-    so_rows = frappe.db.get_all(
-        "Plot Contract Payment",
-        filters={
-            "parenttype": "Plot Sales Order",
-            "status": ["!=", "Paid"],
-            "sales_invoice": ["!=", ""],
-        },
-        fields=["parent", "sales_invoice"],
-    )
-    for row in so_rows:
-        si = frappe.db.get_value(
-            "Sales Invoice",
-            row.sales_invoice,
-            ["docstatus", "outstanding_amount"],
-            as_dict=True,
-        )
-        if si and si.docstatus == 1 and flt(si.outstanding_amount) <= 0:
-            affected_sales_orders.add(row.parent)
-
-    # Header drift repair: SO is still Open even though payments already exist.
-    open_paid_sales_orders = frappe.db.get_all(
-        "Plot Sales Order",
+    standard_rows = frappe.db.get_all(
+        "Sales Order",
         filters={
             "docstatus": 1,
-            "status": "Open",
-            "total_paid": [">", 0],
+            "plot_contract": ["!=", ""],
+            "plot_sales_invoice": ["!=", ""],
         },
-        fields=["name"],
-    )
-    for row in open_paid_sales_orders:
-        affected_sales_orders.add(row.name)
-
-    # Progress-label backfill: older rows may still show default 'Unpaid'
-    # until their sync method runs once after field rollout.
-    so_progress_backfill = frappe.db.sql(
-        """
-        select name
-        from `tabPlot Sales Order`
-        where docstatus = 1
-          and total_paid > 0
-          and ifnull(payment_progress, '') in ('', 'Unpaid')
-        """,
-        as_dict=True,
-    )
-    for row in so_progress_backfill:
-        affected_sales_orders.add(row.name)
-
-    contract_progress_backfill = frappe.db.sql(
-        """
-        select name
-        from `tabPlot Contract`
-        where docstatus = 1
-          and total_paid > 0
-          and ifnull(payment_progress, '') in ('', 'Unpaid')
-        """,
-        as_dict=True,
-    )
-    for row in contract_progress_backfill:
-        affected_contracts.add(row.name)
-
-    # Link-gap repair: SO rows have SI links but linked contract rows are still blank.
-    # This can happen when contract draft existed before SO created installment SIs.
-    link_gap_rows = frappe.db.sql(
-        """
-        select distinct
-            c.name  as contract_name,
-            so.name as sales_order_name
-        from `tabPlot Contract` c
-        inner join `tabPlot Sales Order` so
-            on so.name = c.sales_order
-        inner join `tabPlot Contract Payment` cp
-            on cp.parenttype = 'Plot Contract'
-           and cp.parent = c.name
-        inner join `tabPlot Contract Payment` sp
-            on sp.parenttype = 'Plot Sales Order'
-           and sp.parent = so.name
-           and sp.installment_number = cp.installment_number
-        where c.docstatus = 1
-          and so.docstatus = 1
-          and ifnull(cp.sales_invoice, '') = ''
-          and ifnull(sp.sales_invoice, '') != ''
-        """,
-        as_dict=True,
+        fields=["name", "plot_contract", "plot_sales_invoice"],
     )
 
-    for row in link_gap_rows:
-        try:
-            so = frappe.get_doc("Plot Sales Order", row.sales_order_name)
-            if so.docstatus != 1 or so.status not in ("Open", "Converted"):
-                continue
+    for row in standard_rows:
+        if not frappe.db.exists("Plot Contract", row.plot_contract):
+            continue
+        if not frappe.db.exists("Sales Invoice", row.plot_sales_invoice):
+            continue
 
-            so._sync_payment_status()
-            affected_sales_orders.add(so.name)
+        si = frappe.db.get_value(
+            "Sales Invoice",
+            row.plot_sales_invoice,
+            ["docstatus", "grand_total", "outstanding_amount"],
+            as_dict=True,
+        )
+        if not si or si.docstatus != 1:
+            continue
 
-            contract = frappe.get_doc("Plot Contract", row.contract_name)
-            if contract.docstatus != 1:
-                continue
+        total_paid = max(0.0, flt(si.grand_total) - flt(si.outstanding_amount))
+        contract = frappe.db.get_value(
+            "Plot Contract",
+            row.plot_contract,
+            ["docstatus", "total_paid", "total_outstanding", "contract_status"],
+            as_dict=True,
+        )
+        if not contract:
+            continue
 
-            so._sync_linked_contract_schedule_rows(contract=contract)
-            contract.sync_payment_status()
-            affected_contracts.add(contract.name)
-        except Exception:
-            frappe.log_error(
-                frappe.get_traceback(),
-                f"LMS: Failed link-gap stale sync for SO {row.sales_order_name} / Contract {row.contract_name}",
-            )
+        if (
+            contract.docstatus == 0 and total_paid > 0
+            or flt(contract.total_paid) != total_paid
+            or flt(contract.total_outstanding) != flt(si.outstanding_amount)
+            or (flt(si.outstanding_amount) <= 0 and contract.contract_status != "Completed")
+            or (total_paid > 0 and flt(si.outstanding_amount) > 0 and contract.contract_status != "Ongoing")
+        ):
+            affected_contracts.add(row.plot_contract)
 
     for contract_name in affected_contracts:
         try:
             contract = frappe.get_doc("Plot Contract", contract_name)
-            if contract.docstatus == 1:
+            if contract.docstatus in (0, 1):
                 contract.sync_payment_status()
         except Exception:
             frappe.log_error(
@@ -659,18 +590,7 @@ def auto_sync_stale_payment_statuses():
                 f"LMS: Failed stale sync for Plot Contract {contract_name}",
             )
 
-    for so_name in affected_sales_orders:
-        try:
-            so = frappe.get_doc("Plot Sales Order", so_name)
-            if so.docstatus == 1 and so.status in ("Open", "Converted"):
-                so._sync_payment_status()
-        except Exception:
-            frappe.log_error(
-                frappe.get_traceback(),
-                f"LMS: Failed stale sync for Plot Sales Order {so_name}",
-            )
-
-    if affected_contracts or affected_sales_orders:
+    if affected_contracts:
         frappe.db.commit()
 
 

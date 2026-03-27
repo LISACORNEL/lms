@@ -38,7 +38,7 @@ def receive_ipn(**kwargs):
             endpoint="/api/method/lms.api.tcb.receive_ipn",
             external_reference=reference,
             transaction_id=transaction_id,
-            plot_sales_order=so_name,
+            sales_order=so_name,
             request_payload=payload or raw_body,
             response_payload={"Status": 0, "Message": "Inbound mode Off. Payload logged and ignored."},
         )
@@ -53,7 +53,7 @@ def receive_ipn(**kwargs):
             endpoint="/api/method/lms.api.tcb.receive_ipn",
             external_reference=reference,
             transaction_id=transaction_id,
-            plot_sales_order=so_name,
+            sales_order=so_name,
             request_payload=payload or raw_body,
             response_payload={"Status": 1, "Message": "Unauthorized callback token."},
             error="Token validation failed.",
@@ -71,7 +71,7 @@ def receive_ipn(**kwargs):
             endpoint="/api/method/lms.api.tcb.receive_ipn",
             external_reference=reference,
             transaction_id=transaction_id,
-            plot_sales_order=so_name,
+            sales_order=so_name,
             is_duplicate=1,
             request_payload=payload or raw_body,
             response_payload={"Status": 0, "Message": "Duplicate callback ignored."},
@@ -88,7 +88,7 @@ def receive_ipn(**kwargs):
                 endpoint="/api/method/lms.api.tcb.receive_ipn",
                 external_reference=reference,
                 transaction_id=transaction_id,
-                plot_sales_order=so_name,
+                sales_order=so_name,
                 request_payload=payload or raw_body,
                 response_payload={"Status": 0, "Message": "Auto-apply callback switch is OFF."},
             )
@@ -105,7 +105,7 @@ def receive_ipn(**kwargs):
                 tcb_message=callback_status_desc,
                 external_reference=reference,
                 transaction_id=transaction_id,
-                plot_sales_order=so_name,
+                sales_order=so_name,
                 request_payload=payload or raw_body,
                 response_payload={"Status": 1, "Message": "Callback status is not success; payment not applied."},
             )
@@ -128,7 +128,7 @@ def receive_ipn(**kwargs):
             tcb_message=callback_status_desc,
             external_reference=reference,
             transaction_id=transaction_id,
-            plot_sales_order=apply_result.get("plot_sales_order") or apply_result.get("sales_order") or so_name,
+            sales_order=apply_result.get("sales_order") or so_name,
             payment_entry=apply_result.get("payment_entry"),
             request_payload=payload or raw_body,
             response_payload={"message": apply_result.get("message")},
@@ -149,7 +149,7 @@ def receive_ipn(**kwargs):
         tcb_message=callback_status_desc,
         external_reference=reference,
         transaction_id=transaction_id,
-        plot_sales_order=so_name,
+        sales_order=so_name,
         request_payload=payload or raw_body,
         response_payload={"Status": 0, "Message": "IPN received and logged (Log Only mode)."},
     )
@@ -229,25 +229,17 @@ def _extract_amount_and_date(payload):
 def _find_sales_order_by_reference(reference):
     if not reference:
         return ""
-    so_name = ""
     try:
         if frappe.db.has_column("Sales Order", "control_number"):
-            so_name = frappe.db.get_value(
+            return frappe.db.get_value(
                 "Sales Order",
                 {"control_number": reference, "docstatus": 1},
                 "name",
-            )
+            ) or ""
     except Exception:
-        so_name = ""
+        return ""
 
-    if so_name:
-        return so_name
-
-    return frappe.db.get_value(
-        "Plot Sales Order",
-        {"control_number": reference, "docstatus": 1},
-        "name",
-    ) or ""
+    return ""
 
 
 def _safe_request_header(key):

@@ -16,7 +16,7 @@ def get_columns():
 		{"label": "Period",                   "fieldname": "period",             "fieldtype": "Data",  "width": 160},
 		{"label": "New Contracts",            "fieldname": "new_contracts",      "fieldtype": "Int",   "width": 140},
 		{"label": "New Contract Value (TZS)", "fieldname": "new_contract_value", "fieldtype": "Float", "width": 200},
-		{"label": "Revenue Collected (TZS)",  "fieldname": "revenue_collected",  "fieldtype": "Float", "width": 200},
+		{"label": "Cash Collected (TZS)",     "fieldname": "cash_collected",     "fieldtype": "Float", "width": 200},
 		{"label": "Completed",                "fieldname": "completed",          "fieldtype": "Int",   "width": 120},
 		{"label": "Terminated",               "fieldname": "terminated",         "fieldtype": "Int",   "width": 120},
 	]
@@ -54,7 +54,7 @@ def get_data(filters):
 		ORDER BY sort_key
 	""", {"from_date": from_date, "to_date": to_date}, as_dict=True)
 
-	# Revenue collected per period (through Payment Entries)
+	# Cash collected per period against the single plot sale invoice.
 	revenue_rows = frappe.db.sql(f"""
 		SELECT
 			{p_period}                AS period,
@@ -64,11 +64,16 @@ def get_data(filters):
 		INNER JOIN `tabPayment Entry Reference` per
 			ON  per.parent            = pe.name
 			AND per.reference_doctype = 'Sales Invoice'
-		INNER JOIN `tabPlot Contract Payment` pcp
-			ON  pcp.sales_invoice = per.reference_name
-		INNER JOIN `tabPlot Contract` pc
-			ON  pc.name      = pcp.parent
-			AND pc.docstatus = 1
+		INNER JOIN `tabSales Invoice` si
+			ON  si.name                 = per.reference_name
+			AND si.docstatus            = 1
+			AND si.is_plot_sale_invoice = 1
+		LEFT JOIN `tabSales Order` so
+			ON  so.plot_sales_invoice   = si.name
+			AND so.docstatus            = 1
+		LEFT JOIN `tabPlot Contract` pc
+			ON  pc.name                 = COALESCE(NULLIF(si.plot_contract, ''), so.plot_contract)
+			AND pc.docstatus           != 2
 		WHERE pe.party_type   = 'Customer'
 		  AND pe.docstatus    = 1
 		  AND pe.posting_date BETWEEN %(from_date)s AND %(to_date)s
@@ -92,7 +97,7 @@ def get_data(filters):
 			"period":             all_keys[sort_key],
 			"new_contracts":      cr.new_contracts           if cr else 0,
 			"new_contract_value": flt(cr.new_contract_value) if cr else 0.0,
-			"revenue_collected":  revenue_map.get(sort_key, 0.0),
+			"cash_collected":     revenue_map.get(sort_key, 0.0),
 			"completed":          cr.cnt_completed           if cr else 0,
 			"terminated":         cr.cnt_terminated          if cr else 0,
 		})
@@ -108,7 +113,7 @@ def get_chart(data):
 			"labels": [r["period"] for r in data],
 			"datasets": [
 				{"name": "New Contract Value",  "values": [r["new_contract_value"] for r in data]},
-				{"name": "Revenue Collected",   "values": [r["revenue_collected"]  for r in data]},
+				{"name": "Cash Collected",      "values": [r["cash_collected"]     for r in data]},
 			],
 		},
 		"type":   "bar",
@@ -122,7 +127,7 @@ def get_summary(data):
 
 	total_contracts = sum(int(r.get("new_contracts") or 0) for r in data)
 	total_value = sum(flt(r.get("new_contract_value")) for r in data)
-	total_revenue = sum(flt(r.get("revenue_collected")) for r in data)
+	total_revenue = sum(flt(r.get("cash_collected")) for r in data)
 	total_completed = sum(int(r.get("completed") or 0) for r in data)
 	total_terminated = sum(int(r.get("terminated") or 0) for r in data)
 	collection_ratio = (total_revenue / total_value * 100) if total_value else 0
@@ -130,7 +135,7 @@ def get_summary(data):
 	return [
 		{"label": "New Contracts", "value": total_contracts, "datatype": "Int", "indicator": "Blue"},
 		{"label": "New Contract Value", "value": total_value, "datatype": "Currency", "indicator": "Blue"},
-		{"label": "Revenue Collected", "value": total_revenue, "datatype": "Currency", "indicator": "Green"},
+		{"label": "Cash Collected", "value": total_revenue, "datatype": "Currency", "indicator": "Green"},
 		{"label": "Completed Contracts", "value": total_completed, "datatype": "Int", "indicator": "Green"},
 		{"label": "Terminated Contracts", "value": total_terminated, "datatype": "Int", "indicator": "Orange"},
 		{

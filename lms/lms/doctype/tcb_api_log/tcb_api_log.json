@@ -5,7 +5,7 @@
  "autoname": "naming_series:",
  "track_changes": 0,
  "title_field": "external_reference",
- "search_fields": "external_reference,transaction_id,plot_sales_order,status",
+ "search_fields": "external_reference,transaction_id,sales_order,status",
  "field_order": [
   "naming_series",
   "meta_section",
@@ -23,7 +23,7 @@
   "reference_section",
   "external_reference",
   "transaction_id",
-  "plot_sales_order",
+  "sales_order",
   "plot_contract",
   "payment_entry",
   "payload_section",
@@ -140,10 +140,10 @@
    "in_list_view": 1
   },
   {
-   "fieldname": "plot_sales_order",
+   "fieldname": "sales_order",
    "fieldtype": "Link",
-   "label": "Plot Sales Order",
-   "options": "Plot Sales Order",
+   "label": "Sales Order",
+   "options": "Sales Order",
    "read_only": 1,
    "in_list_view": 1
   },

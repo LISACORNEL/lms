@@ -100,13 +100,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "legal_status",
-   "fieldtype": "Select",
-   "label": "Legal Status",
-   "options": "Freehold\nRight of Occupancy\nLeasehold",
-   "reqd": 1
-  },
-  {
    "fieldname": "title_deed_number",
    "fieldtype": "Data",
    "label": "Title Deed Number"
@@ -156,12 +149,6 @@
    "options": "Supplier",
    "reqd": 1,
    "description": "Must exist as a Supplier in ERPNext — used for journal entry on approval"
-  },
-  {
-   "fieldname": "seller_name",
-   "fieldtype": "Data",
-   "label": "Seller Name",
-   "reqd": 1
   },
   {
    "fieldname": "seller_id_type",

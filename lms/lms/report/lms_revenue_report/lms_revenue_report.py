@@ -39,7 +39,7 @@ def get_data(filters):
 			{period_expr}                                                AS period,
 			{sort_expr}                                                  AS sort_key,
 			COUNT(DISTINCT pe.name)                                      AS payment_count,
-			COUNT(DISTINCT pc.name)                                      AS contract_count,
+			COUNT(DISTINCT COALESCE(pc.name, so.plot_contract))          AS contract_count,
 			SUM(per.allocated_amount)                                    AS total_collected,
 			SUM(
 				CASE
@@ -52,12 +52,16 @@ def get_data(filters):
 		INNER JOIN `tabPayment Entry Reference` per
 			ON  per.parent             = pe.name
 			AND per.reference_doctype  = 'Sales Invoice'
-		INNER JOIN `tabPlot Contract Payment` pcp
-			ON  pcp.sales_invoice = per.reference_name
-			AND pcp.parenttype    = 'Plot Contract'
-		INNER JOIN `tabPlot Contract` pc
-			ON  pc.name     = pcp.parent
-			AND pc.docstatus = 1
+		INNER JOIN `tabSales Invoice` si
+			ON  si.name                 = per.reference_name
+			AND si.docstatus            = 1
+			AND si.is_plot_sale_invoice = 1
+		LEFT JOIN `tabSales Order` so
+			ON  so.plot_sales_invoice   = si.name
+			AND so.docstatus            = 1
+		LEFT JOIN `tabPlot Contract` pc
+			ON  pc.name                 = COALESCE(NULLIF(si.plot_contract, ''), so.plot_contract)
+			AND pc.docstatus           != 2
 		WHERE pe.party_type   = 'Customer'
 		  AND pe.docstatus    = 1
 		  AND pe.posting_date BETWEEN %(from_date)s AND %(to_date)s

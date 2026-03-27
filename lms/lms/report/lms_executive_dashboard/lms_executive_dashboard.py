@@ -30,7 +30,9 @@ def get_metrics():
 	""", as_dict=True)
 	plot_map = {r.status: r.cnt for r in plot_counts}
 	available = plot_map.get("Available", 0)
+	pending_advance = plot_map.get("Pending Advance", 0)
 	reserved = plot_map.get("Reserved", 0)
+	ready_for_handover = plot_map.get("Ready for Handover", 0)
 	delivered = plot_map.get("Delivered", 0)
 	total_plots = sum(plot_map.values())
 
@@ -73,7 +75,9 @@ def get_metrics():
 	return {
 		"total_plots": total_plots,
 		"available": available,
+		"pending_advance": pending_advance,
 		"reserved": reserved,
+		"ready_for_handover": ready_for_handover,
 		"delivered": delivered,
 		"contracts_total": int(fin.contracts_total or 0),
 		"draft_contracts": int(fin.draft_contracts or 0),
@@ -108,9 +112,21 @@ def get_data(metrics):
 		},
 		{
 			"section": "PLOTS",
+			"kpi": "Pending Advance Plots",
+			"value": str(metrics["pending_advance"]),
+			"notes": "Fee paid, waiting for first advance",
+		},
+		{
+			"section": "PLOTS",
 			"kpi": "Reserved Plots",
 			"value": str(metrics["reserved"]),
 			"notes": "Linked to active sales/contracts",
+		},
+		{
+			"section": "PLOTS",
+			"kpi": "Ready for Handover",
+			"value": str(metrics["ready_for_handover"]),
+			"notes": "Fully paid, waiting for physical handover",
 		},
 		{
 			"section": "PLOTS",
@@ -174,15 +190,15 @@ def get_data(metrics):
 		},
 		{
 			"section": "FINANCIALS",
-			"kpi": "COGS (Delivered)",
+			"kpi": "COGS (Completed Contracts)",
 			"value": tzs(metrics["cogs"]),
-			"notes": "Allocated plot costs for delivered plots",
+			"notes": "Allocated plot costs for completed contracts",
 		},
 		{
 			"section": "FINANCIALS",
 			"kpi": "Gross Margin",
 			"value": tzs(metrics["gross_margin"]),
-			"notes": "Revenue recognized minus delivered COGS",
+			"notes": "Revenue recognized minus completed-contract COGS",
 		},
 		{
 			"section": "RATIOS",
@@ -202,10 +218,12 @@ def get_data(metrics):
 def get_chart(metrics):
 	return {
 		"data": {
-			"labels": [
-				"Available Plots",
-				"Reserved Plots",
-				"Delivered Plots",
+				"labels": [
+					"Available Plots",
+					"Pending Advance Plots",
+					"Reserved Plots",
+					"Ready for Handover",
+					"Delivered Plots",
 				"Draft Contracts",
 				"Ongoing Contracts",
 				"Completed Contracts",
@@ -216,7 +234,9 @@ def get_chart(metrics):
 					"name": "Count",
 					"values": [
 						metrics["available"],
+						metrics["pending_advance"],
 						metrics["reserved"],
+						metrics["ready_for_handover"],
 						metrics["delivered"],
 						metrics["draft_contracts"],
 						metrics["ongoing_contracts"],
@@ -248,16 +268,28 @@ def get_report_summary(metrics):
 			"indicator": "Green",
 		},
 		{
-			"label": "Ongoing Contracts",
-			"value": metrics["ongoing_contracts"],
+			"label": "Pending Advance",
+			"value": metrics["pending_advance"],
+			"datatype": "Int",
+			"indicator": "Yellow",
+		},
+		{
+			"label": "Reserved Plots",
+			"value": metrics["reserved"],
 			"datatype": "Int",
 			"indicator": "Orange",
 		},
 		{
-			"label": "Completed Contracts",
-			"value": metrics["completed_contracts"],
+			"label": "Ready for Handover",
+			"value": metrics["ready_for_handover"],
 			"datatype": "Int",
-			"indicator": "Green",
+			"indicator": "Cyan",
+		},
+		{
+			"label": "Ongoing Contracts",
+			"value": metrics["ongoing_contracts"],
+			"datatype": "Int",
+			"indicator": "Orange",
 		},
 		{
 			"label": "Cash Collected (TZS)",
