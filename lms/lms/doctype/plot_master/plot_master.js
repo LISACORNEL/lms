@@ -14,6 +14,7 @@ frappe.ui.form.on('Plot Master', {
 		// Color the status indicator
 		const colors = {
 			'Available': 'green',
+			'Pending Fee': 'orange',
 			'Pending Advance': 'yellow',
 			'Reserved': 'orange',
 			'Ready for Handover': 'cyan',
@@ -25,48 +26,74 @@ frappe.ui.form.on('Plot Master', {
 	},
 
 	land_acquisition: function(frm) {
-		// When a Land Acquisition is selected, fill the allocated cost
 		if (!frm.doc.land_acquisition) {
 			frm.set_value('acquisition_name', '');
+			frm.set_value('cost_per_sqm', 0);
+			frm.set_value('allocated_cost', 0);
 			return;
 		}
 
-				frappe.db.get_doc('Land Acquisition', frm.doc.land_acquisition)
-					.then(doc => {
-						if (!['Approved', 'Subdivided'].includes(doc.status)) {
-						frappe.msgprint({
-							title: 'Invalid Selection',
-							message: `Land Acquisition ${frm.doc.land_acquisition} must be Approved or Subdivided (status: ${doc.status}).`,
-							indicator: 'red'
-							});
-							frm.set_value('land_acquisition', '');
-							frm.set_value('acquisition_name', '');
-							return;
-					}
-					frm.set_value('acquisition_name', doc.acquisition_name || '');
-					// Cost will be calculated server-side based on plot_size_sqm
-					// Just show a message to fill in the plot size
-					frappe.show_alert({
-						message: `Land Acquisition selected: ${doc.name} - ${doc.acquisition_name || ''}. Enter the plot size to calculate allocated cost.`,
-						indicator: 'blue'
+		frappe.db.get_doc('Land Acquisition', frm.doc.land_acquisition)
+			.then(doc => {
+				if (!['Approved', 'Subdivided'].includes(doc.status)) {
+					frappe.msgprint({
+						title: 'Invalid Selection',
+						message: `Land Acquisition ${frm.doc.land_acquisition} must be Approved or Subdivided (status: ${doc.status}).`,
+						indicator: 'red'
 					});
+					frm.set_value('land_acquisition', '');
+					frm.set_value('acquisition_name', '');
+					frm.set_value('cost_per_sqm', 0);
+					frm.set_value('allocated_cost', 0);
+					return;
+				}
+
+				frm.set_value('acquisition_name', doc.acquisition_name || '');
+				recalculate_costs(frm, doc);
+
+				frappe.show_alert({
+					message: `Land Acquisition selected: ${doc.name} - ${doc.acquisition_name || ''}. Cost per sqm has been loaded.`,
+					indicator: 'blue'
 				});
+			});
 	},
 
 	plot_size_sqm: function(frm) {
-		// Recalculate allocated cost when plot size changes
 		if (frm.doc.land_acquisition && frm.doc.plot_size_sqm) {
 			frappe.db.get_doc('Land Acquisition', frm.doc.land_acquisition)
-				.then(doc => {
-					if (doc.total_area_sqm > 0) {
-						const cost_per_sqm = doc.acquisition_cost_tzs / doc.total_area_sqm;
-						const allocated = cost_per_sqm * frm.doc.plot_size_sqm;
-						frm.set_value('allocated_cost', allocated);
-						frm.set_df_property('allocated_cost', 'description',
-							`${doc.acquisition_cost_tzs.toLocaleString()} TZS ÷ ${doc.total_area_sqm} sqm × ${frm.doc.plot_size_sqm} sqm`
-						);
-					}
-				});
+				.then(doc => recalculate_costs(frm, doc));
+		} else {
+			frm.set_value('allocated_cost', 0);
 		}
 	}
 });
+
+function recalculate_costs(frm, acquisition) {
+	if (!acquisition || !acquisition.total_area_sqm) {
+		frm.set_value('cost_per_sqm', 0);
+		frm.set_value('allocated_cost', 0);
+		return;
+	}
+
+	const cost_per_sqm = flt(acquisition.acquisition_cost_tzs) / flt(acquisition.total_area_sqm);
+	const allocated = cost_per_sqm * flt(frm.doc.plot_size_sqm);
+
+	frm.set_value('cost_per_sqm', cost_per_sqm);
+	frm.set_value('allocated_cost', allocated);
+
+	frm.set_df_property(
+		'cost_per_sqm',
+		'description',
+		`${flt(acquisition.acquisition_cost_tzs).toLocaleString()} TZS ÷ ${flt(acquisition.total_area_sqm).toLocaleString()} sqm`
+	);
+	frm.set_df_property(
+		'allocated_cost',
+		'description',
+		`${cost_per_sqm.toLocaleString()} TZS × ${flt(frm.doc.plot_size_sqm).toLocaleString()} sqm`
+	);
+	frm.set_df_property(
+		'selling_price',
+		'description',
+		`Base cost is ${allocated.toLocaleString()} TZS. Enter your selling price above this amount.`
+	);
+}

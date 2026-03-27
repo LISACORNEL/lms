@@ -90,6 +90,7 @@ required_apps = ["erpnext"]
 after_migrate = [
 	"lms.migrate.reload_lms_doctypes",
 	"lms.custom_fields.ensure_lms_custom_fields",
+	"lms.workflows.ensure_lms_workflows",
 ]
 
 # Uninstallation

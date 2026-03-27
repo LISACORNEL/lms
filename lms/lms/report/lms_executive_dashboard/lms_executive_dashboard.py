@@ -30,6 +30,7 @@ def get_metrics():
 	""", as_dict=True)
 	plot_map = {r.status: r.cnt for r in plot_counts}
 	available = plot_map.get("Available", 0)
+	pending_fee = plot_map.get("Pending Fee", 0)
 	pending_advance = plot_map.get("Pending Advance", 0)
 	reserved = plot_map.get("Reserved", 0)
 	ready_for_handover = plot_map.get("Ready for Handover", 0)
@@ -75,6 +76,7 @@ def get_metrics():
 	return {
 		"total_plots": total_plots,
 		"available": available,
+		"pending_fee": pending_fee,
 		"pending_advance": pending_advance,
 		"reserved": reserved,
 		"ready_for_handover": ready_for_handover,
@@ -109,6 +111,12 @@ def get_data(metrics):
 			"kpi": "Available Plots",
 			"value": str(metrics["available"]),
 			"notes": "Ready for new applications",
+		},
+		{
+			"section": "PLOTS",
+			"kpi": "Pending Fee Plots",
+			"value": str(metrics["pending_fee"]),
+			"notes": "Application submitted, waiting for application-fee payment",
 		},
 		{
 			"section": "PLOTS",
@@ -220,6 +228,7 @@ def get_chart(metrics):
 		"data": {
 				"labels": [
 					"Available Plots",
+					"Pending Fee Plots",
 					"Pending Advance Plots",
 					"Reserved Plots",
 					"Ready for Handover",
@@ -234,6 +243,7 @@ def get_chart(metrics):
 					"name": "Count",
 					"values": [
 						metrics["available"],
+						metrics["pending_fee"],
 						metrics["pending_advance"],
 						metrics["reserved"],
 						metrics["ready_for_handover"],
@@ -272,6 +282,12 @@ def get_report_summary(metrics):
 			"value": metrics["pending_advance"],
 			"datatype": "Int",
 			"indicator": "Yellow",
+		},
+		{
+			"label": "Pending Fee",
+			"value": metrics["pending_fee"],
+			"datatype": "Int",
+			"indicator": "Orange",
 		},
 		{
 			"label": "Reserved Plots",

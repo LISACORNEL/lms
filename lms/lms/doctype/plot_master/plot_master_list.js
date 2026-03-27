@@ -12,6 +12,7 @@ frappe.listview_settings['Plot Master'] = {
 
 		const map = {
 			'Available': ['Available', 'green', 'status,=,Available'],
+			'Pending Fee': ['Pending Fee', 'orange', 'status,=,Pending Fee'],
 			'Pending Advance': ['Pending Advance', 'yellow', 'status,=,Pending Advance'],
 			'Reserved': ['Reserved', 'orange', 'status,=,Reserved'],
 			'Ready for Handover': ['Ready for Handover', 'blue', 'status,=,Ready for Handover'],

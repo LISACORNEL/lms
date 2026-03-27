@@ -81,6 +81,7 @@ def get_summary(data):
 		return []
 
 	available = sum(1 for r in data if r["status"] == "Available")
+	pending_fee = sum(1 for r in data if r["status"] == "Pending Fee")
 	pending_advance = sum(1 for r in data if r["status"] == "Pending Advance")
 	reserved = sum(1 for r in data if r["status"] == "Reserved")
 	ready_for_handover = sum(1 for r in data if r["status"] == "Ready for Handover")
@@ -95,6 +96,7 @@ def get_summary(data):
 	return [
 		{"label": "Total Plots", "value": len(data), "datatype": "Int", "indicator": "Blue"},
 		{"label": "Available", "value": available, "datatype": "Int", "indicator": "Green"},
+		{"label": "Pending Fee", "value": pending_fee, "datatype": "Int", "indicator": "Orange"},
 		{"label": "Pending Advance", "value": pending_advance, "datatype": "Int", "indicator": "Yellow"},
 		{"label": "Reserved", "value": reserved, "datatype": "Int", "indicator": "Orange"},
 		{"label": "Ready for Handover", "value": ready_for_handover, "datatype": "Int", "indicator": "Cyan"},
@@ -111,7 +113,7 @@ def get_chart(data):
 	if not data:
 		return None
 
-	status_order = ["Available", "Pending Advance", "Reserved", "Ready for Handover", "Delivered", "Title Closed"]
+	status_order = ["Available", "Pending Fee", "Pending Advance", "Reserved", "Ready for Handover", "Delivered", "Title Closed"]
 	status_counts = {status: 0 for status in status_order}
 	for row in data:
 		if row["status"] in status_counts:
@@ -125,6 +127,7 @@ def get_chart(data):
 
 	color_map = {
 		"Available": "#2f9e44",
+		"Pending Fee": "#f08c00",
 		"Pending Advance": "#fab005",
 		"Reserved": "#f08c00",
 		"Ready for Handover": "#15aabf",

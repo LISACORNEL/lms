@@ -2,7 +2,10 @@ import frappe
 from frappe.model.document import Document
 from frappe.utils import flt
 
-from lms.lms.doctype.land_acquisition.land_acquisition import sync_land_acquisition_plot_summary
+from lms.lms.doctype.land_acquisition.land_acquisition import (
+	sync_land_acquisition_plot_summary,
+	validate_coordinate_pair,
+)
 
 PLOT_TYPE_TO_ITEM = {
 	"Residential": "RESIDENTIAL PLOT",
@@ -17,7 +20,9 @@ class PlotMaster(Document):
 		self.validate_land_acquisition()
 		self.fill_acquisition_name()
 		self.fill_sales_defaults()
+		self.fill_location_coordinates()
 		self.fill_allocated_cost()
+		validate_coordinate_pair(self)
 		self.validate_duplicate_plot_number()
 		self.validate_selling_price()
 
@@ -46,6 +51,22 @@ class PlotMaster(Document):
 		self.booking_fee_percent = flt(defaults.get("booking_fee_percent"))
 		self.government_share_percent = flt(defaults.get("government_share_percent"))
 		self.payment_completion_days = int(defaults.get("payment_completion_days") or 0)
+
+	def fill_location_coordinates(self):
+		if not self.land_acquisition:
+			return
+
+		coordinates = frappe.db.get_value(
+			"Land Acquisition",
+			self.land_acquisition,
+			["latitude", "longitude"],
+			as_dict=True,
+		) or {}
+
+		if self.latitude in (None, "") and coordinates.get("latitude") not in (None, ""):
+			self.latitude = flt(coordinates.get("latitude"))
+		if self.longitude in (None, "") and coordinates.get("longitude") not in (None, ""):
+			self.longitude = flt(coordinates.get("longitude"))
 
 	def validate_land_acquisition(self):
 		if not self.land_acquisition:

@@ -1,28 +1,19 @@
 frappe.ui.form.on('Land Acquisition', {
     refresh: function(frm) {
-        // Show Approve button only when submitted and pending approval
-        if (frm.doc.docstatus === 1 && frm.doc.status === "Pending Approval") {
-            frm.add_custom_button('Approve', function() {
-                frappe.confirm(
-                    'Are you sure you want to approve this Land Acquisition?',
-                    function() {
-                        frappe.call({
-                            method: 'approve',
-                            doc: frm.doc,
-                            callback: function(r) {
-                                frm.reload_doc();
-                            }
-                        });
-                    }
-                );
-            }).addClass('btn-primary');
-        }
-
-        // Show status as a color indicator
-        if (frm.doc.docstatus === 1 && frm.doc.status === "Approved") {
+        if (frm.doc.docstatus === 0 && frm.doc.approval_state === "Pending Approval") {
+            frm.dashboard.set_headline_alert(
+                'This Land Acquisition is waiting for approval',
+                'orange'
+            );
+        } else if (frm.doc.docstatus === 1 && frm.doc.status === "Approved") {
             frm.dashboard.set_headline_alert(
                 'This Land Acquisition is Approved',
                 'green'
+            );
+        } else if (frm.doc.docstatus === 1 && frm.doc.status === "Subdivided") {
+            frm.dashboard.set_headline_alert(
+                'This Land Acquisition is Approved and already subdivided',
+                'blue'
             );
         }
 

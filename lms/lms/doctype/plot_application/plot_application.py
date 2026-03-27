@@ -21,6 +21,13 @@ class PlotApplication(Document):
 		self._lock_plot_row()
 		self._ensure_no_other_active_application_for_submit()
 
+	def before_cancel(self):
+		if self.status == "Converted":
+			frappe.throw(
+				"This application has already been converted into an active sale. "
+				"Cancel the Sales Order before first payment, or terminate the Plot Contract after payment."
+			)
+
 	def validate_plot_available(self):
 		"""Draft-time checks for plot availability and existing active applications."""
 		if not self.plot:
@@ -108,6 +115,11 @@ class PlotApplication(Document):
 
 	def on_submit(self):
 		self.db_set("status", "Submitted")
+		if self.plot:
+			current_plot_status = frappe.db.get_value("Plot Master", self.plot, "status")
+			if current_plot_status == "Available":
+				frappe.db.set_value("Plot Master", self.plot, "status", "Pending Fee")
+				self._sync_land_acquisition_summary()
 
 	def on_cancel(self):
 		"""Handle cancellation — manual, auto-cancel (unpaid), or auto-expire (paid past deadline).
@@ -116,12 +128,14 @@ class PlotApplication(Document):
           - "Expired"   → paid application past its reservation deadline
           - (default)   → unpaid timeout or manual cancel by user
         """
-		# If plot was locked by this application, release it
-		if self.status == "Paid":
+		# If plot was locked by this application, release it.
+		if self.status in ("Submitted", "Paid"):
 			plot_status = frappe.db.get_value("Plot Master", self.plot, "status")
-			if plot_status in ("Pending Advance", "Reserved"):
+			if plot_status in ("Pending Fee", "Pending Advance", "Reserved"):
 				frappe.db.set_value("Plot Master", self.plot, "status", "Available")
 				self._sync_land_acquisition_summary()
+
+		if self.status == "Paid":
 			self._cancel_linked_sales_order_if_safe()
 		
 		reason = getattr(self.flags, "_cancellation_reason", None)
@@ -194,10 +208,10 @@ class PlotApplication(Document):
 			)
 
 		plot_status = frappe.db.get_value("Plot Master", self.plot, "status")
-		if plot_status != "Available":
+		if plot_status not in ("Available", "Pending Fee"):
 			frappe.throw(
 				f"Cannot record payment for {self.name}. Plot {self.plot} is {plot_status}, "
-				"not Available."
+				"not ready for application fee payment."
 			)
 
 		settings = frappe.get_single("LMS Settings")

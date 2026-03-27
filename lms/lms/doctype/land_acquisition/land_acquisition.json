@@ -73,6 +73,18 @@
    "label": "Ward"
   },
   {
+   "fieldname": "latitude",
+   "fieldtype": "Float",
+   "label": "Latitude",
+   "description": "Optional center-point latitude for this acquisition"
+  },
+  {
+   "fieldname": "longitude",
+   "fieldtype": "Float",
+   "label": "Longitude",
+   "description": "Optional center-point longitude for this acquisition"
+  },
+  {
    "fieldname": "location_description",
    "fieldtype": "Small Text",
    "label": "Location Description"
@@ -215,6 +227,13 @@
    "label": "Approval"
   },
   {
+   "fieldname": "approval_state",
+   "fieldtype": "Data",
+   "label": "Approval State",
+   "read_only": 1,
+   "default": "Draft"
+  },
+  {
    "fieldname": "approved_by",
    "fieldtype": "Link",
    "label": "Approved By",
@@ -306,6 +325,12 @@
    "read": 1,
    "write": 1,
    "create": 1
+  },
+  {
+   "role": "Land Acquisition Approver",
+   "read": 1,
+   "write": 1,
+   "submit": 1
   },
   {
    "role": "Finance",

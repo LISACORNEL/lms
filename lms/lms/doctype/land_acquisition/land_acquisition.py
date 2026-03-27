@@ -29,7 +29,8 @@ def sync_land_acquisition_plot_summary(land_acquisition):
         "total_plots": total_plots,
         "available_plots": int(status_map.get("Available", 0)),
         "reserved_plots": int(
-            status_map.get("Pending Advance", 0)
+            status_map.get("Pending Fee", 0)
+            + status_map.get("Pending Advance", 0)
             + status_map.get("Reserved", 0)
             + status_map.get("Ready for Handover", 0)
         ),
@@ -52,150 +53,162 @@ def sync_land_acquisition_plot_summary(land_acquisition):
     return summary
 
 
+def validate_coordinate_pair(doc, latitude_field="latitude", longitude_field="longitude"):
+	latitude = doc.get(latitude_field)
+	longitude = doc.get(longitude_field)
+	has_latitude = latitude not in (None, "")
+	has_longitude = longitude not in (None, "")
+
+	if has_latitude != has_longitude:
+		frappe.throw("Enter both Latitude and Longitude, or leave both blank.")
+
+	if not has_latitude:
+		return
+
+	latitude = flt(latitude)
+	longitude = flt(longitude)
+	if latitude < -90 or latitude > 90:
+		frappe.throw("Latitude must be between -90 and 90.")
+	if longitude < -180 or longitude > 180:
+		frappe.throw("Longitude must be between -180 and 180.")
+
+
 class LandAcquisition(Document):
 
-    def validate(self):
-        self.calculate_total_from_items()
-        self.calculate_cost_tzs()
-        self.validate_cost()
-        self.validate_area()
-        self.validate_sales_defaults()
+	def validate(self):
+		self.calculate_total_from_items()
+		self.calculate_cost_tzs()
+		self.validate_cost()
+		self.validate_area()
+		self.validate_sales_defaults()
+		validate_coordinate_pair(self)
 
-    def calculate_total_from_items(self):
-        self.total_acquisition_cost = sum(flt(row.amount) for row in self.cost_items)
+	def before_submit(self):
+		if self.approval_state != "Approved":
+			frappe.throw("Land Acquisition must be approved through workflow before submission.")
 
-    def calculate_cost_tzs(self):
-        self.acquisition_cost_tzs = flt(self.total_acquisition_cost) * flt(self.exchange_rate or 1)
+	def calculate_total_from_items(self):
+		self.total_acquisition_cost = sum(flt(row.amount) for row in self.cost_items)
 
-    def validate_cost(self):
-        if not self.cost_items:
-            frappe.throw("Add at least one cost item in the Cost Breakdown table.")
-        if flt(self.total_acquisition_cost) <= 0:
-            frappe.throw("Total Acquisition Cost must be greater than zero.")
+	def calculate_cost_tzs(self):
+		self.acquisition_cost_tzs = flt(self.total_acquisition_cost) * flt(self.exchange_rate or 1)
 
-    def validate_area(self):
-        if flt(self.total_area_sqm) <= 0:
-            frappe.throw("Total Area must be greater than zero.")
+	def validate_cost(self):
+		if not self.cost_items:
+			frappe.throw("Add at least one cost item in the Cost Breakdown table.")
+		if flt(self.total_acquisition_cost) <= 0:
+			frappe.throw("Total Acquisition Cost must be greater than zero.")
 
-    def validate_sales_defaults(self):
-        if flt(self.booking_fee_percent) < 0 or flt(self.booking_fee_percent) > 100:
-            frappe.throw("Booking Fee % must be between 0 and 100.")
+	def validate_area(self):
+		if flt(self.total_area_sqm) <= 0:
+			frappe.throw("Total Area must be greater than zero.")
 
-        if flt(self.government_share_percent) < 0 or flt(self.government_share_percent) > 100:
-            frappe.throw("Government Share % must be between 0 and 100.")
+	def validate_sales_defaults(self):
+		if flt(self.booking_fee_percent) < 0 or flt(self.booking_fee_percent) > 100:
+			frappe.throw("Booking Fee % must be between 0 and 100.")
 
-        if cint(self.payment_completion_days) <= 0:
-            frappe.throw("Payment Completion Days must be greater than zero.")
+		if flt(self.government_share_percent) < 0 or flt(self.government_share_percent) > 100:
+			frappe.throw("Government Share % must be between 0 and 100.")
 
-    def on_submit(self):
-        self.db_set("status", "Pending Approval")
-        sync_land_acquisition_plot_summary(self.name)
+		if cint(self.payment_completion_days) <= 0:
+			frappe.throw("Payment Completion Days must be greater than zero.")
 
-    def before_cancel(self):
-        """Block cancellation while submitted Plot Masters still exist."""
-        active_plot_count = frappe.db.count("Plot Master", {
-            "land_acquisition": self.name,
-            "docstatus": 1,
-        })
-        if not active_plot_count:
-            return
+	def on_submit(self):
+		self.create_journal_entry()
+		self.db_set("status", "Approved")
+		self.db_set("approved_by", frappe.session.user)
+		self.db_set("approval_date", today())
+		sync_land_acquisition_plot_summary(self.name)
 
-        sample_plots = frappe.db.get_all(
-            "Plot Master",
-            filters={"land_acquisition": self.name, "docstatus": 1},
-            fields=["name"],
-            limit_page_length=3,
-        )
-        sample_names = ", ".join(row.name for row in sample_plots)
-        extra = ""
-        if active_plot_count > len(sample_plots):
-            extra = f", and {active_plot_count - len(sample_plots)} more"
+	def before_cancel(self):
+		"""Block cancellation while submitted Plot Masters still exist."""
+		active_plot_count = frappe.db.count("Plot Master", {
+			"land_acquisition": self.name,
+			"docstatus": 1,
+		})
+		if not active_plot_count:
+			return
 
-        frappe.throw(
-            "Cannot cancel this Land Acquisition because submitted plots still exist: "
-            f"{sample_names}{extra}. Cancel those Plot Master records first."
-        )
+		sample_plots = frappe.db.get_all(
+			"Plot Master",
+			filters={"land_acquisition": self.name, "docstatus": 1},
+			fields=["name"],
+			limit_page_length=3,
+		)
+		sample_names = ", ".join(row.name for row in sample_plots)
+		extra = ""
+		if active_plot_count > len(sample_plots):
+			extra = f", and {active_plot_count - len(sample_plots)} more"
 
-    def on_cancel(self):
-        self.cancel_journal_entry()
-        sync_land_acquisition_plot_summary(self.name)
+		frappe.throw(
+			"Cannot cancel this Land Acquisition because submitted plots still exist: "
+			f"{sample_names}{extra}. Cancel those Plot Master records first."
+		)
 
-    @frappe.whitelist()
-    def approve(self):
-        if self.status != "Pending Approval":
-            frappe.throw("Only documents in Pending Approval status can be approved.")
+	def on_cancel(self):
+		self.cancel_journal_entry()
+		sync_land_acquisition_plot_summary(self.name)
 
-        if self.docstatus != 1:
-            frappe.throw("Document must be submitted before it can be approved.")
+	def cancel_journal_entry(self):
+		"""Ensure accounting stays consistent when LA is cancelled."""
+		if not self.journal_entry:
+			return
 
-        self.create_journal_entry()
+		je_doc = frappe.get_doc("Journal Entry", self.journal_entry)
+		if je_doc.docstatus == 1:
+			je_doc.cancel()
+		elif je_doc.docstatus == 0:
+			frappe.delete_doc("Journal Entry", je_doc.name, ignore_permissions=True)
 
-        self.db_set("status", "Approved")
-        self.db_set("approved_by", frappe.session.user)
-        self.db_set("approval_date", today())
-        sync_land_acquisition_plot_summary(self.name)
-        frappe.msgprint("Land Acquisition approved and journal entry posted.", alert=True)
+	def create_journal_entry(self):
+		settings = frappe.get_single("LMS Settings")
+		company = settings.company
+		land_account = settings.land_under_development_account
 
-    def cancel_journal_entry(self):
-        """Ensure accounting stays consistent when LA is cancelled."""
-        if not self.journal_entry:
-            return
+		if not land_account:
+			frappe.throw("Land Under Development account not set in LMS Settings.")
 
-        je_doc = frappe.get_doc("Journal Entry", self.journal_entry)
-        if je_doc.docstatus == 1:
-            je_doc.cancel()
-        elif je_doc.docstatus == 0:
-            frappe.delete_doc("Journal Entry", je_doc.name, ignore_permissions=True)
+		seller_payable_account = settings.seller_payable_account
+		if not seller_payable_account:
+			frappe.throw("Seller Payable account not set in LMS Settings.")
 
-    def create_journal_entry(self):
-        settings = frappe.get_single("LMS Settings")
-        company = settings.company
-        land_account = settings.land_under_development_account
+		if not self.seller:
+			frappe.throw("Seller (Supplier) must be set before approval so the journal entry can be posted.")
 
-        if not land_account:
-            frappe.throw("Land Under Development account not set in LMS Settings.")
+		cost_center = frappe.db.get_value(
+			"Cost Center",
+			{"company": company, "is_group": 0},
+			"name"
+		)
 
-        seller_payable_account = settings.seller_payable_account
-        if not seller_payable_account:
-            frappe.throw("Seller Payable account not set in LMS Settings.")
+		amount = flt(self.acquisition_cost_tzs)
 
-        if not self.seller:
-            frappe.throw("Seller (Supplier) must be set before approval so the journal entry can be posted.")
+		je = frappe.get_doc({
+			"doctype": "Journal Entry",
+			"voucher_type": "Journal Entry",
+			"posting_date": self.acquisition_date,
+			"company": company,
+			"user_remark": f"Land Acquisition — {self.acquisition_name} ({self.name})",
+			"accounts": [
+				{
+					"account": land_account,
+					"debit_in_account_currency": amount,
+					"credit_in_account_currency": 0,
+					"cost_center": cost_center
+				},
+				{
+					"account": seller_payable_account,
+					"debit_in_account_currency": 0,
+					"credit_in_account_currency": amount,
+					"cost_center": cost_center,
+					"party_type": "Supplier",
+					"party": self.seller
+				}
+			]
+		})
 
-        cost_center = frappe.db.get_value(
-            "Cost Center",
-            {"company": company, "is_group": 0},
-            "name"
-        )
+		je.insert(ignore_permissions=True)
+		je.submit()
 
-        amount = flt(self.acquisition_cost_tzs)
-
-        je = frappe.get_doc({
-            "doctype": "Journal Entry",
-            "voucher_type": "Journal Entry",
-            "posting_date": self.acquisition_date,
-            "company": company,
-            "user_remark": f"Land Acquisition — {self.acquisition_name} ({self.name})",
-            "accounts": [
-                {
-                    "account": land_account,
-                    "debit_in_account_currency": amount,
-                    "credit_in_account_currency": 0,
-                    "cost_center": cost_center
-                },
-                {
-                    "account": seller_payable_account,
-                    "debit_in_account_currency": 0,
-                    "credit_in_account_currency": amount,
-                    "cost_center": cost_center,
-                    "party_type": "Supplier",
-                    "party": self.seller
-                }
-            ]
-        })
-
-        je.insert(ignore_permissions=True)
-        je.submit()
-
-        self.db_set("journal_entry", je.name)
-        frappe.msgprint(f"Journal Entry {je.name} posted successfully.", alert=True)
+		self.db_set("journal_entry", je.name)
+		frappe.msgprint(f"Journal Entry {je.name} posted successfully.", alert=True)

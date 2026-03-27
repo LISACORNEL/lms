@@ -60,7 +60,7 @@
    "options": "Plot Master",
    "reqd": 1,
    "in_list_view": 1,
-   "description": "Only Available plots can be selected"
+   "description": "Only currently available plots can be selected. On submit the plot moves to Pending Fee until the application is paid or cancelled."
   },
   {
    "fieldname": "acquisition_name",
