@@ -352,13 +352,11 @@ class PlotApplication(Document):
 		if payment_completion_days <= 0:
 			frappe.throw(f"Plot {plot.name} is missing Payment Completion Days.")
 
-		from lms.lms.doctype.plot_master.plot_master import PLOT_TYPE_TO_ITEM
-		item_code = PLOT_TYPE_TO_ITEM.get(plot.plot_type)
-		if not item_code:
-			frappe.throw(f"No item is mapped for plot type {plot.plot_type}.")
+		from lms.sales_order_hooks import _build_sales_order_item_row
 
 		transaction_date = self.payment_date or today()
 		payment_deadline = add_days(transaction_date, payment_completion_days)
+		item_row = _build_sales_order_item_row(plot, settings.plot_inventory_warehouse, payment_deadline)
 
 		so = frappe.get_doc({
 			"doctype": "Sales Order",
@@ -375,13 +373,7 @@ class PlotApplication(Document):
 			"government_share_percent": flt(plot.government_share_percent),
 			"payment_completion_days": payment_completion_days,
 			"payment_deadline": payment_deadline,
-			"items": [{
-				"item_code": item_code,
-				"qty": 1,
-				"rate": flt(plot.selling_price),
-				"warehouse": settings.plot_inventory_warehouse,
-				"delivery_date": payment_deadline,
-			}],
+			"items": [item_row],
 		})
 		so.insert(ignore_permissions=True)
 

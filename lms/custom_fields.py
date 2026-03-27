@@ -96,6 +96,13 @@ CUSTOM_FIELDS = {
 			"read_only": 1,
 			"insert_after": "payment_completion_days",
 		},
+		{
+			"fieldname": "plot_outstanding_amount",
+			"fieldtype": "Currency",
+			"label": "Outstanding Amount",
+			"read_only": 1,
+			"insert_after": "advance_paid",
+		},
 	],
 	"Sales Invoice": [
 		{

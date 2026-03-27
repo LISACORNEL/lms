@@ -43,7 +43,9 @@ required_apps = ["erpnext"]
 # page_js = {"page" : "public/js/file.js"}
 
 # include js in doctype views
-# doctype_js = {"doctype" : "public/js/doctype.js"}
+doctype_js = {
+	"Sales Order": "public/js/sales_order.js",
+}
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
 # doctype_calendar_js = {"doctype" : "public/js/doctype_calendar.js"}
@@ -152,7 +154,9 @@ doc_events = {
 		"on_cancel": "lms.sales_order_hooks.on_cancel_sales_order",
 	},
 	"Payment Entry": {
+		"validate": "lms.payment_sync.validate_payment_entry",
 		"on_submit": "lms.payment_sync.on_submit_payment_entry",
+		"on_cancel": "lms.payment_sync.on_cancel_payment_entry",
 	},
 }
 

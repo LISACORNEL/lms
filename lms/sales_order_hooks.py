@@ -33,6 +33,64 @@ def validate_sales_order(doc, method=None):
 	_ensure_payment_schedule(doc, plot)
 
 
+@frappe.whitelist()
+def get_sales_order_defaults(plot_application: str):
+	"""Return LMS Sales Order defaults for a selected paid Plot Application."""
+	if not plot_application:
+		return {}
+
+	if not frappe.db.exists("Plot Application", plot_application):
+		frappe.throw(f"Plot Application {plot_application} was not found.")
+
+	application = frappe.get_doc("Plot Application", plot_application)
+	if application.docstatus != 1 or application.status != "Paid":
+		frappe.throw("Only submitted, fee-paid Plot Applications can be used to create a Sales Order.")
+
+	if application.sales_order and frappe.db.exists("Sales Order", application.sales_order):
+		frappe.throw(
+			f"Plot Application {application.name} is already linked to Sales Order {application.sales_order}."
+		)
+
+	if not application.plot or not frappe.db.exists("Plot Master", application.plot):
+		frappe.throw(f"Plot Application {application.name} is missing a valid plot.")
+
+	settings = frappe.get_single("LMS Settings")
+	plot = frappe.get_doc("Plot Master", application.plot)
+	_validate_application_window(application)
+	_validate_plot_state(plot)
+
+	item_code = PLOT_TYPE_TO_ITEM.get(plot.plot_type)
+	if not item_code:
+		frappe.throw(f"No item is mapped for plot type {plot.plot_type}.")
+
+	transaction_date = application.payment_date or today()
+	payment_completion_days = cint(plot.payment_completion_days or 0)
+	payment_deadline = add_days(transaction_date, payment_completion_days)
+	payment_schedule = _build_payment_schedule_rows(
+		total_amount=flt(plot.selling_price),
+		booking_fee_percent=flt(plot.booking_fee_percent),
+		transaction_date=transaction_date,
+		payment_deadline=payment_deadline,
+	)
+	item_row = _build_sales_order_item_row(plot, settings.plot_inventory_warehouse, payment_deadline)
+
+	return {
+		"company": settings.company,
+		"customer": application.customer,
+		"plot": plot.name,
+		"land_acquisition": plot.land_acquisition,
+		"acquisition_name": plot.acquisition_name,
+		"booking_fee_percent": flt(plot.booking_fee_percent),
+		"government_share_percent": flt(plot.government_share_percent),
+		"payment_completion_days": payment_completion_days,
+		"transaction_date": transaction_date,
+		"payment_deadline": payment_deadline,
+		"set_warehouse": settings.plot_inventory_warehouse,
+		"item": item_row,
+		"payment_schedule": payment_schedule,
+	}
+
+
 def on_submit_sales_order(doc, method=None):
 	if not _is_lms_sales_order(doc):
 		return
@@ -60,6 +118,11 @@ def on_submit_sales_order(doc, method=None):
 		doc.db_set("plot_contract", contract_name)
 	if invoice_name and doc.plot_sales_invoice != invoice_name:
 		doc.db_set("plot_sales_invoice", invoice_name)
+
+	if invoice_name:
+		from lms.payment_sync import _sync_sales_order_from_plot_invoice
+
+		_sync_sales_order_from_plot_invoice(doc.name)
 
 
 def on_cancel_sales_order(doc, method=None):
@@ -143,26 +206,45 @@ def _ensure_single_sales_order_for_application(doc, application):
 
 
 def _ensure_items(doc, plot, settings):
-	item_code = PLOT_TYPE_TO_ITEM.get(plot.plot_type)
-	if not item_code:
-		frappe.throw(f"No item is mapped for plot type {plot.plot_type}.")
-
 	delivery_date = add_days(doc.transaction_date or today(), cint(doc.payment_completion_days or 0))
-	row_values = {
-		"item_code": item_code,
-		"qty": 1,
-		"rate": flt(plot.selling_price),
-		"warehouse": settings.plot_inventory_warehouse,
-		"delivery_date": delivery_date,
-	}
+	row_values = _build_sales_order_item_row(plot, settings.plot_inventory_warehouse, delivery_date)
 
-	if len(doc.items or []) == 1 and doc.items[0].get("item_code") == item_code:
+	if len(doc.items or []) == 1 and doc.items[0].get("item_code") == row_values["item_code"]:
 		row = doc.items[0]
 		for key, value in row_values.items():
 			row.set(key, value)
 		return
 
 	doc.set("items", [row_values])
+
+
+def _build_sales_order_item_row(plot, warehouse, delivery_date):
+	item_code = PLOT_TYPE_TO_ITEM.get(plot.plot_type)
+	if not item_code:
+		frappe.throw(f"No item is mapped for plot type {plot.plot_type}.")
+
+	item = frappe.db.get_value(
+		"Item",
+		item_code,
+		["name", "item_name", "stock_uom"],
+		as_dict=True,
+	)
+	if not item:
+		frappe.throw(f"Item {item_code} was not found.")
+	if not item.stock_uom:
+		frappe.throw(f"Item {item_code} is missing Stock UOM.")
+
+	return {
+		"item_code": item.name,
+		"item_name": item.item_name,
+		"uom": item.stock_uom,
+		"stock_uom": item.stock_uom,
+		"conversion_factor": 1,
+		"qty": 1,
+		"rate": flt(plot.selling_price),
+		"warehouse": warehouse,
+		"delivery_date": delivery_date,
+	}
 
 
 def _build_payment_schedule_rows(total_amount, booking_fee_percent, transaction_date, payment_deadline):
@@ -281,6 +363,7 @@ def _sync_contract_schedule(contract, doc):
 
 def _ensure_plot_sales_invoice(doc, contract_name):
 	if doc.get("plot_sales_invoice") and frappe.db.exists("Sales Invoice", doc.plot_sales_invoice):
+		_link_plot_invoice_to_sales_order(doc, doc.plot_sales_invoice)
 		return doc.plot_sales_invoice
 
 	settings = frappe.get_single("LMS Settings")
@@ -300,6 +383,7 @@ def _ensure_plot_sales_invoice(doc, contract_name):
 		"name",
 	)
 	if existing:
+		_link_plot_invoice_to_sales_order(doc, existing)
 		return existing
 
 	invoice = frappe.get_doc(
@@ -315,16 +399,17 @@ def _ensure_plot_sales_invoice(doc, contract_name):
 			"plot_contract": contract_name or "",
 			"is_plot_sale_invoice": 1,
 			"remarks": f"Plot sale invoice for {doc.plot} via Sales Order {doc.name}",
-			"items": [
-				{
-					"item_code": item_code,
-					"qty": 1,
-					"rate": flt(plot.selling_price),
-					"income_account": settings.customer_advance_account,
-					"sales_order": doc.name,
-					"description": f"Plot sale for {doc.plot}",
-				}
-			],
+				"items": [
+					{
+						"item_code": item_code,
+						"qty": 1,
+						"rate": flt(plot.selling_price),
+						"income_account": settings.customer_advance_account,
+						"sales_order": doc.name,
+						"so_detail": doc.items[0].name if doc.items else "",
+						"description": f"Plot sale for {doc.plot}",
+					}
+				],
 			"payment_schedule": [
 				{
 					"description": row.description,
@@ -339,6 +424,32 @@ def _ensure_plot_sales_invoice(doc, contract_name):
 	invoice.insert(ignore_permissions=True)
 	invoice.submit()
 	return invoice.name
+
+
+def _link_plot_invoice_to_sales_order(doc, invoice_name):
+	"""Backfill missing Sales Order item linkage on existing plot invoices."""
+	if not invoice_name or not frappe.db.exists("Sales Invoice", invoice_name):
+		return
+	if not doc.items:
+		return
+
+	so_item_name = doc.items[0].name
+	if not so_item_name:
+		return
+
+	invoice_items = frappe.get_all(
+		"Sales Invoice Item",
+		filters={"parent": invoice_name},
+		fields=["name", "sales_order", "so_detail"],
+	)
+	for item in invoice_items:
+		updates = {}
+		if item.sales_order != doc.name:
+			updates["sales_order"] = doc.name
+		if not item.so_detail:
+			updates["so_detail"] = so_item_name
+		if updates:
+			frappe.db.set_value("Sales Invoice Item", item.name, updates, update_modified=False)
 
 
 def _cancel_unpaid_plot_sales_invoice(doc):

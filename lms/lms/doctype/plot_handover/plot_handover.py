@@ -1,6 +1,6 @@
 import frappe
 from frappe.model.document import Document
-from frappe.utils import today
+from frappe.utils import get_fullname, today
 
 from lms.lms.doctype.land_acquisition.land_acquisition import sync_land_acquisition_plot_summary
 from lms.lms.doctype.plot_master.plot_master import PLOT_TYPE_TO_ITEM
@@ -8,9 +8,12 @@ from lms.lms.doctype.plot_master.plot_master import PLOT_TYPE_TO_ITEM
 
 class PlotHandover(Document):
 
+	def before_validate(self):
+		self._fill_from_contract()
+		self._fill_company_representative()
+
 	def validate(self):
 		self._ensure_no_existing_handover()
-		self._fill_from_contract()
 
 	def on_submit(self):
 		delivery_note = self._ensure_delivery_note()
@@ -68,6 +71,13 @@ class PlotHandover(Document):
 		self.land_acquisition = contract.land_acquisition
 		self.contract_date = contract.contract_date
 		self.selling_price = contract.selling_price
+
+	def _fill_company_representative(self):
+		defaults = get_logged_in_representative_details()
+		if not self.handed_over_by and defaults.get("handed_over_by"):
+			self.handed_over_by = defaults["handed_over_by"]
+		if not self.handed_over_by_title and defaults.get("handed_over_by_title"):
+			self.handed_over_by_title = defaults["handed_over_by_title"]
 
 	def _ensure_delivery_note(self):
 		if self.delivery_note and frappe.db.exists("Delivery Note", self.delivery_note):
@@ -151,3 +161,53 @@ class PlotHandover(Document):
 	def _sync_land_acquisition_summary(self):
 		if self.land_acquisition:
 			sync_land_acquisition_plot_summary(self.land_acquisition)
+
+
+@frappe.whitelist()
+def get_logged_in_representative_details():
+	user = frappe.session.user
+	if not user or user == "Guest":
+		return {}
+
+	employee = frappe.db.get_value(
+		"Employee",
+		{"user_id": user, "status": "Active"},
+		["employee_name", "designation"],
+		as_dict=True,
+	)
+
+	return {
+		"handed_over_by": (employee.employee_name if employee and employee.employee_name else get_fullname(user) or "").strip(),
+		"handed_over_by_title": (employee.designation if employee and employee.designation else "").strip(),
+	}
+
+
+@frappe.whitelist()
+def get_plot_handover_defaults(contract: str):
+	if not contract:
+		return {}
+
+	if not frappe.db.exists("Plot Contract", contract):
+		frappe.throw(f"Plot Contract {contract} was not found.")
+
+	contract_doc = frappe.get_doc("Plot Contract", contract)
+	if contract_doc.contract_status != "Completed":
+		frappe.throw(
+			f"Contract {contract_doc.name} is not Completed. A handover can only be created for a fully paid contract."
+		)
+
+	plot_status = frappe.db.get_value("Plot Master", contract_doc.plot, "status")
+	if plot_status not in ("Ready for Handover", "Delivered"):
+		frappe.throw(
+			f"Plot {contract_doc.plot} is in status {plot_status}. "
+			"A handover can only be created when the plot is Ready for Handover."
+		)
+
+	return {
+		"customer": contract_doc.customer,
+		"plot": contract_doc.plot,
+		"acquisition_name": contract_doc.acquisition_name,
+		"land_acquisition": contract_doc.land_acquisition,
+		"contract_date": contract_doc.contract_date,
+		"selling_price": contract_doc.selling_price,
+	}
