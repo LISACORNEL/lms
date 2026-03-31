@@ -18,7 +18,7 @@
   {
    "fieldname": "basic_section",
    "fieldtype": "Section Break",
-   "label": "Land Details"
+   "label": "Basic Information"
   },
   {
    "fieldname": "acquisition_name",
@@ -114,7 +114,173 @@
   {
    "fieldname": "title_deed_number",
    "fieldtype": "Data",
-   "label": "Title Deed Number"
+   "label": "Title Deed Number",
+   "description": "Title deed for this specific land acquisition."
+  },
+  {
+   "fieldname": "seller_section",
+   "fieldtype": "Section Break",
+   "label": "Land Settlements"
+  },
+  {
+   "fieldname": "land_sellers",
+   "fieldtype": "Table",
+   "label": "Land Sellers",
+   "options": "Land Acquisition Seller",
+   "hidden": 1,
+   "read_only": 1,
+   "description": "Legacy table hidden after the move to Purchase Order and Purchase Invoice driven seller tracking."
+  },
+  {
+   "fieldname": "land_seller_summary_html",
+   "fieldtype": "HTML",
+   "label": "Land Settlements"
+  },
+  {
+   "fieldname": "seller_section_legacy_break",
+   "fieldtype": "Section Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "seller",
+   "fieldtype": "Link",
+   "label": "Primary Land Seller (Supplier)",
+   "options": "Supplier",
+   "hidden": 1,
+   "description": "Must exist as a Supplier in ERPNext — used as the supplier on the base land Purchase Invoice created on approval"
+  },
+  {
+   "fieldname": "seller_id_type",
+   "fieldtype": "Select",
+   "label": "Primary Seller ID Type",
+   "options": "National ID\nPassport\nCompany Registration",
+   "hidden": 1
+  },
+  {
+   "fieldname": "col_break_4",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "seller_id_number",
+   "fieldtype": "Data",
+   "label": "Primary Seller ID Number",
+   "hidden": 1
+  },
+  {
+   "fieldname": "supplier_invoice_summary_section",
+   "fieldtype": "Section Break",
+   "label": "Other Services"
+  },
+  {
+   "fieldname": "supplier_invoice_summary_html",
+   "fieldtype": "HTML",
+   "label": "Other Services"
+  },
+  {
+   "fieldname": "supplier_invoice_total_tzs",
+   "fieldtype": "Currency",
+   "label": "Other Service Posted Total (TZS)",
+   "precision": "2",
+   "read_only": 1,
+   "hidden": 1,
+   "description": "Total posted through non-land-seller Purchase Invoices tagged to this Land Acquisition. Purchase Orders show in the table as commitments but are not included in this total."
+  },
+  {
+   "fieldname": "cost_section",
+   "fieldtype": "Section Break",
+   "label": "Acquisition Cost"
+  },
+  {
+   "fieldname": "seller_purchase_amount_tzs",
+   "fieldtype": "Currency",
+   "label": "Base Seller Cost (TZS)",
+   "precision": "2",
+   "read_only": 1,
+   "hidden": 1,
+   "description": "Calculated automatically from submitted Purchase Invoices tagged to this Land Acquisition where the Supplier is marked as a Land Seller."
+  },
+  {
+   "fieldname": "cost_summary_col_break",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "committed_cost_tzs",
+   "fieldtype": "Currency",
+   "label": "Committed Extra Costs (TZS)",
+   "precision": "2",
+   "read_only": 1,
+   "description": "Planned extra costs from open Purchase Orders tagged to this Land Acquisition. These are commitments, not yet posted costs."
+  },
+  {
+   "fieldname": "additional_project_cost_tzs",
+   "fieldtype": "Currency",
+   "label": "Other Service Posted Costs (TZS)",
+   "precision": "2",
+   "read_only": 1,
+   "description": "Submitted non-land-seller Purchase Invoices tagged to this Land Acquisition. These are part of the total land cost."
+  },
+  {
+   "fieldname": "cost_col_break_main",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "acquisition_cost_tzs",
+   "fieldtype": "Currency",
+   "label": "Total Land Cost (TZS)",
+   "precision": "2",
+   "read_only": 1,
+   "bold": 1,
+   "description": "Total submitted Purchase Invoices tagged to this Land Acquisition. This is the current land cost basis used downstream."
+  },
+  {
+   "fieldname": "cost_per_sqm_tzs",
+   "fieldtype": "Currency",
+   "label": "Land Cost per sqm (TZS)",
+   "precision": "2",
+   "read_only": 1,
+   "description": "Auto-calculated from Total Land Cost divided by Total Area. Plot Master uses this internally for allocation, but the detail now lives here."
+  },
+  {
+   "fieldname": "cost_items",
+   "fieldtype": "Table",
+   "label": "Cost Breakdown",
+   "options": "Land Acquisition Cost Item",
+   "hidden": 1,
+   "description": "Legacy manual table. Standard ERP transactions tagged to this Land Acquisition are now the primary cost source."
+  },
+  {
+   "fieldname": "total_acquisition_cost",
+   "fieldtype": "Float",
+   "label": "Total Acquisition Cost",
+   "read_only": 1,
+   "hidden": 1,
+   "description": "Legacy compatibility field."
+  },
+  {
+   "fieldname": "acquisition_currency",
+   "fieldtype": "Link",
+   "label": "Currency",
+   "options": "Currency",
+   "reqd": 1,
+   "default": "TZS",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
+   "fieldname": "col_break_5",
+   "fieldtype": "Column Break",
+   "hidden": 1
+  },
+  {
+   "fieldname": "exchange_rate",
+   "fieldtype": "Float",
+   "label": "Exchange Rate",
+   "default": "1.0",
+   "description": "Managed automatically for the summary view.",
+   "read_only": 1,
+   "hidden": 1
   },
   {
    "fieldname": "sales_defaults_section",
@@ -138,6 +304,14 @@
    "description": "Default government share percentage for plots created under this acquisition"
   },
   {
+   "fieldname": "default_selling_price_per_sqm_tzs",
+   "fieldtype": "Currency",
+   "precision": "2",
+   "label": "Default Selling Price per sqm (TZS)",
+   "hidden": 1,
+   "description": "Legacy single-rate field kept only for compatibility during the per-plot-type pricing cutover."
+  },
+  {
    "fieldname": "sales_defaults_col_break",
    "fieldtype": "Column Break"
   },
@@ -150,76 +324,34 @@
    "description": "Default number of days allowed to complete plot payment after the fee stage"
   },
   {
-   "fieldname": "seller_section",
+   "fieldname": "plot_rate_section",
    "fieldtype": "Section Break",
-   "label": "Seller Information"
+   "label": "Plot Selling Rates"
   },
   {
-   "fieldname": "seller",
-   "fieldtype": "Link",
-   "label": "Seller (Supplier)",
-   "options": "Supplier",
-   "reqd": 1,
-   "description": "Must exist as a Supplier in ERPNext — used for journal entry on approval"
+   "fieldname": "residential_selling_price_per_sqm_tzs",
+   "fieldtype": "Currency",
+   "precision": "2",
+   "label": "Residential Rate per sqm (TZS)",
+   "description": "Selling rate per sqm to apply automatically on Residential plots created under this acquisition."
   },
   {
-   "fieldname": "seller_id_type",
-   "fieldtype": "Select",
-   "label": "Seller ID Type",
-   "options": "National ID\nPassport\nCompany Registration"
+   "fieldname": "commercial_selling_price_per_sqm_tzs",
+   "fieldtype": "Currency",
+   "precision": "2",
+   "label": "Commercial Rate per sqm (TZS)",
+   "description": "Selling rate per sqm to apply automatically on Commercial plots created under this acquisition."
   },
   {
-   "fieldname": "col_break_4",
+   "fieldname": "plot_rate_col_break",
    "fieldtype": "Column Break"
   },
   {
-   "fieldname": "seller_id_number",
-   "fieldtype": "Data",
-   "label": "Seller ID Number"
-  },
-  {
-   "fieldname": "cost_section",
-   "fieldtype": "Section Break",
-   "label": "Acquisition Cost"
-  },
-  {
-   "fieldname": "cost_items",
-   "fieldtype": "Table",
-   "label": "Cost Breakdown",
-   "options": "Land Acquisition Cost Item"
-  },
-  {
-   "fieldname": "total_acquisition_cost",
-   "fieldtype": "Float",
-   "label": "Total Acquisition Cost",
-   "read_only": 1,
-   "description": "Auto-calculated from cost breakdown rows above"
-  },
-  {
-   "fieldname": "acquisition_currency",
-   "fieldtype": "Link",
-   "label": "Currency",
-   "options": "Currency",
-   "reqd": 1,
-   "default": "TZS"
-  },
-  {
-   "fieldname": "col_break_5",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "exchange_rate",
-   "fieldtype": "Float",
-   "label": "Exchange Rate",
-   "default": "1.0",
-   "description": "Leave as 1.0 if currency is TZS"
-  },
-  {
-   "fieldname": "acquisition_cost_tzs",
-   "fieldtype": "Float",
-   "label": "Acquisition Cost (TZS)",
-   "read_only": 1,
-   "description": "Auto calculated from cost x exchange rate"
+   "fieldname": "mixed_use_selling_price_per_sqm_tzs",
+   "fieldtype": "Currency",
+   "precision": "2",
+   "label": "Mixed-Use Rate per sqm (TZS)",
+   "description": "Selling rate per sqm to apply automatically on Mixed-Use plots created under this acquisition."
   },
   {
    "fieldname": "approval_section",
@@ -247,12 +379,21 @@
    "read_only": 1
   },
   {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Base Purchase Invoice",
+   "options": "Purchase Invoice",
+   "read_only": 1,
+   "hidden": 1
+  },
+  {
    "fieldname": "journal_entry",
    "fieldtype": "Link",
-   "label": "Journal Entry",
+   "label": "Legacy Journal Entry",
    "options": "Journal Entry",
-   "read_only": 1
-},
+   "read_only": 1,
+   "hidden": 1
+  },
   {
    "fieldname": "plots_summary_section",
    "fieldtype": "Section Break",

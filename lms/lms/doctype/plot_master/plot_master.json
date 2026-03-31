@@ -92,13 +92,24 @@
    "fieldname": "cost_per_sqm",
    "fieldtype": "Float",
    "label": "Cost per sqm (TZS)",
+   "hidden": 1,
    "read_only": 1,
    "description": "Auto-calculated from Land Acquisition cost divided by total area"
+  },
+  {
+   "fieldname": "selling_price_per_sqm_tzs",
+   "fieldtype": "Currency",
+   "precision": "2",
+   "label": "Selling Price per sqm (TZS)",
+   "hidden": 1,
+   "read_only": 1,
+   "description": "Auto-filled from the selected Land Acquisition rate for this plot type"
   },
   {
    "fieldname": "allocated_cost",
    "fieldtype": "Float",
    "label": "Allocated Cost (TZS)",
+   "hidden": 1,
    "read_only": 1,
    "description": "Auto-calculated as cost per sqm multiplied by plot size"
   },
@@ -107,7 +118,8 @@
    "fieldtype": "Float",
    "label": "Selling Price (TZS)",
    "reqd": 1,
-   "description": "Price this plot will be sold for"
+   "read_only": 1,
+   "description": "Auto-calculated from the selected Land Acquisition rate for this plot type and plot size."
   },
   {
    "fieldname": "sales_defaults_section",

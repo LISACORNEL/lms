@@ -45,6 +45,8 @@ required_apps = ["erpnext"]
 # include js in doctype views
 doctype_js = {
 	"Sales Order": "public/js/sales_order.js",
+	"Purchase Order": "public/js/buying_land_acquisition.js",
+	"Purchase Invoice": "public/js/buying_land_acquisition.js",
 }
 # doctype_list_js = {"doctype" : "public/js/doctype_list.js"}
 # doctype_tree_js = {"doctype" : "public/js/doctype_tree.js"}
@@ -89,10 +91,19 @@ doctype_js = {
 
 # Migration
 # ---------
+before_migrate = [
+	"lms.accounting_dimensions.prepare_land_acquisition_dimension_migration",
+]
+
 after_migrate = [
-	"lms.migrate.reload_lms_doctypes",
-	"lms.custom_fields.ensure_lms_custom_fields",
-	"lms.workflows.ensure_lms_workflows",
+    "lms.migrate.reload_lms_doctypes",
+    "lms.migrate.backfill_land_acquisition_plot_rates",
+    "lms.accounting_dimensions.ensure_land_acquisition_accounting_dimension",
+    "lms.custom_fields.ensure_lms_custom_fields",
+    "lms.migrate.backfill_land_seller_suppliers",
+    "lms.migrate.backfill_supplier_land_seller_details",
+    "lms.migrate.hide_supplier_title_deed_field",
+    "lms.workflows.ensure_lms_workflows",
 ]
 
 # Uninstallation
@@ -152,6 +163,21 @@ doc_events = {
 		"validate": "lms.sales_order_hooks.validate_sales_order",
 		"on_submit": "lms.sales_order_hooks.on_submit_sales_order",
 		"on_cancel": "lms.sales_order_hooks.on_cancel_sales_order",
+	},
+	"Purchase Order": {
+		"on_submit": "lms.lms.doctype.land_acquisition.land_acquisition.sync_costs_from_purchase_order",
+		"on_cancel": "lms.lms.doctype.land_acquisition.land_acquisition.sync_costs_from_purchase_order",
+		"on_update_after_submit": "lms.lms.doctype.land_acquisition.land_acquisition.sync_costs_from_purchase_order",
+	},
+	"Purchase Invoice": {
+		"on_submit": "lms.lms.doctype.land_acquisition.land_acquisition.sync_costs_from_purchase_invoice",
+		"on_cancel": "lms.lms.doctype.land_acquisition.land_acquisition.sync_costs_from_purchase_invoice",
+		"on_update_after_submit": "lms.lms.doctype.land_acquisition.land_acquisition.sync_costs_from_purchase_invoice",
+	},
+	"Journal Entry": {
+		"on_submit": "lms.lms.doctype.land_acquisition.land_acquisition.sync_costs_from_journal_entry",
+		"on_cancel": "lms.lms.doctype.land_acquisition.land_acquisition.sync_costs_from_journal_entry",
+		"on_update_after_submit": "lms.lms.doctype.land_acquisition.land_acquisition.sync_costs_from_journal_entry",
 	},
 	"Payment Entry": {
 		"validate": "lms.payment_sync.validate_payment_entry",

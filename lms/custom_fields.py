@@ -3,6 +3,34 @@ from frappe.custom.doctype.custom_field.custom_field import create_custom_fields
 
 
 CUSTOM_FIELDS = {
+	"Supplier": [
+		{
+			"fieldname": "lms_seller_section",
+			"fieldtype": "Section Break",
+			"label": "Land Seller Details",
+			"insert_after": "tax_id",
+		},
+		{
+			"fieldname": "is_land_seller",
+			"fieldtype": "Check",
+			"label": "Is Land Seller",
+			"default": "0",
+			"insert_after": "lms_seller_section",
+		},
+		{
+			"fieldname": "seller_id_type",
+			"fieldtype": "Select",
+			"label": "Seller ID Type",
+			"options": "\nNational ID\nPassport\nCompany Registration",
+			"insert_after": "is_land_seller",
+		},
+		{
+			"fieldname": "seller_id_number",
+			"fieldtype": "Data",
+			"label": "Seller ID Number",
+			"insert_after": "seller_id_type",
+		},
+	],
 	"Sales Order": [
 		{
 			"fieldname": "lms_section",

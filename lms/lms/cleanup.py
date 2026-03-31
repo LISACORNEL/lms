@@ -31,7 +31,7 @@ def clear_lms_data():
 	_log(f"Reset scope: applications={len(data['applications'])}, sales_orders={len(data['sales_orders'])}, "
 	     f"contracts={len(data['contracts'])}, handovers={len(data['handovers'])}, plots={len(data['plots'])}, "
 	     f"land_acquisitions={len(data['land_acquisitions'])}")
-	_log(f"Linked ERP docs: payment_entries={len(data['payment_entries'])}, sales_invoices={len(data['sales_invoices'])}, "
+	_log(f"Linked ERP docs: payment_entries={len(data['payment_entries'])}, sales_invoices={len(data['sales_invoices'])}, purchase_invoices={len(data['purchase_invoices'])}, "
 	     f"journal_entries={len(data['journal_entries'])}, delivery_notes={len(data['delivery_notes'])}, "
 	     f"stock_entries={len(data['stock_entries'])}, serial_nos={len(data['serial_nos'])}, "
 	     f"tcb_logs={len(data['tcb_logs'])}")
@@ -59,15 +59,19 @@ def clear_lms_data():
 	for name in data["sales_invoices"]:
 		_cancel_and_delete("Sales Invoice", name)
 
-	# 7. Remove contract/acquisition journal entries after references are cleared.
+	# 7. Remove purchase invoices created by Land Acquisition after references are cleared.
+	for name in data["purchase_invoices"]:
+		_cancel_and_delete("Purchase Invoice", name)
+
+	# 8. Remove contract/acquisition journal entries after references are cleared.
 	for name in data["journal_entries"]:
 		_cancel_and_delete("Journal Entry", name)
 
-	# 8. Remove TCB logs.
+	# 9. Remove TCB logs.
 	for name in data["tcb_logs"]:
 		_delete_doc_force("TCB API Log", name)
 
-	# 9. Remove contracts and their child rows.
+	# 10. Remove contracts and their child rows.
 	if frappe.db.exists("DocType", "Plot Contract Payment"):
 		frappe.db.sql("DELETE FROM `tabPlot Contract Payment`")
 		frappe.db.commit()
@@ -75,11 +79,11 @@ def clear_lms_data():
 	for name in data["contracts"]:
 		_cancel_and_delete("Plot Contract", name)
 
-	# 10. Remove plots so their stock receipts are reversed, then clean stock artifacts.
+	# 11. Remove plots so their stock receipts are reversed, then clean stock artifacts.
 	for name in data["plots"]:
 		_cancel_and_delete("Plot Master", name)
 
-	# 11. Clean any ERP stock docs still left behind.
+	# 12. Clean any ERP stock docs still left behind.
 	for name in data["delivery_notes"]:
 		if frappe.db.exists("Delivery Note", name):
 			_cancel_and_delete("Delivery Note", name)
@@ -92,11 +96,11 @@ def clear_lms_data():
 		if frappe.db.exists("Serial No", name):
 			_delete_doc_force("Serial No", name)
 
-	# 12. Remove Land Acquisitions last.
+	# 13. Remove Land Acquisitions last.
 	for name in data["land_acquisitions"]:
 		_cancel_and_delete("Land Acquisition", name)
 
-	# 13. Sweep older orphaned ERP docs that still match LMS naming/remark patterns.
+	# 14. Sweep older orphaned ERP docs that still match LMS naming/remark patterns.
 	for name in _get_residual_delivery_notes():
 		_cancel_and_delete("Delivery Note", name)
 
@@ -149,7 +153,7 @@ def _collect_reset_targets():
 	)
 	land_acquisitions = frappe.get_all(
 		"Land Acquisition",
-		fields=["name", "journal_entry"],
+		fields=["name", "journal_entry", "purchase_invoice"],
 		limit_page_length=0,
 		order_by="creation asc",
 	)
@@ -196,6 +200,19 @@ def _collect_reset_targets():
 			or []
 		)
 
+	purchase_invoice_names = {
+		row.purchase_invoice for row in land_acquisitions if row.get("purchase_invoice")
+	}
+	if frappe.db.exists("DocType", "Land Acquisition Seller"):
+		purchase_invoice_names.update(
+			frappe.get_all(
+				"Land Acquisition Seller",
+				filters={"purchase_invoice": ["!=", ""]},
+				pluck="purchase_invoice",
+				limit_page_length=0,
+			)
+		)
+
 	journal_entry_names = {
 		row.government_fee_entry for row in contracts if row.get("government_fee_entry")
 	}
@@ -225,6 +242,7 @@ def _collect_reset_targets():
 		"land_acquisitions": [row.name for row in land_acquisitions],
 		"payment_entries": sorted(name for name in payment_entry_names if name),
 		"sales_invoices": sorted(name for name in sales_invoice_names if name),
+		"purchase_invoices": sorted(name for name in purchase_invoice_names if name),
 		"journal_entries": sorted(name for name in journal_entry_names if name),
 		"delivery_notes": sorted(name for name in delivery_note_names if name),
 		"stock_entries": sorted(name for name in stock_entry_names if name),
@@ -248,7 +266,9 @@ def _clear_link_fields(data):
 		)
 
 	if data["land_acquisitions"] and frappe.db.has_column("Land Acquisition", "journal_entry"):
-		frappe.db.sql("update `tabLand Acquisition` set journal_entry = ''")
+		frappe.db.sql("update `tabLand Acquisition` set journal_entry = '', purchase_invoice = ''")
+	if frappe.db.exists("DocType", "Land Acquisition Seller") and frappe.db.has_column("Land Acquisition Seller", "purchase_invoice"):
+		frappe.db.sql("update `tabLand Acquisition Seller` set purchase_invoice = ''")
 
 	frappe.db.commit()
 

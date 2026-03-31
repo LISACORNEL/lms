@@ -1,0 +1,46 @@
+{
+ "doctype": "DocType",
+ "name": "Land Acquisition Seller",
+ "module": "Lms",
+ "istable": 1,
+ "editable_grid": 1,
+ "fields": [
+  {
+   "fieldname": "supplier",
+   "fieldtype": "Link",
+   "label": "Supplier",
+   "options": "Supplier",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 3
+  },
+  {
+   "fieldname": "supplier_name",
+   "fieldtype": "Data",
+   "label": "Supplier Name",
+   "read_only": 1,
+   "fetch_from": "supplier.supplier_name",
+   "in_list_view": 1,
+   "columns": 4
+  },
+  {
+   "fieldname": "amount_tzs",
+   "fieldtype": "Currency",
+   "label": "Amount (TZS)",
+   "reqd": 1,
+   "in_list_view": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "purchase_invoice",
+   "fieldtype": "Link",
+   "label": "Purchase Invoice",
+   "options": "Purchase Invoice",
+   "read_only": 1,
+   "in_list_view": 1,
+   "columns": 3
+  }
+ ],
+ "permissions": []
+}
+

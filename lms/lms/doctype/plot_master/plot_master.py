@@ -13,6 +13,12 @@ PLOT_TYPE_TO_ITEM = {
 	"Mixed-Use": "MIXED USED PLOT",
 }
 
+PLOT_TYPE_TO_RATE_FIELD = {
+	"Residential": "residential_selling_price_per_sqm_tzs",
+	"Commercial": "commercial_selling_price_per_sqm_tzs",
+	"Mixed-Use": "mixed_use_selling_price_per_sqm_tzs",
+}
+
 
 class PlotMaster(Document):
 
@@ -21,7 +27,7 @@ class PlotMaster(Document):
 		self.fill_acquisition_name()
 		self.fill_sales_defaults()
 		self.fill_location_coordinates()
-		self.fill_allocated_cost()
+		self.fill_financials()
 		validate_coordinate_pair(self)
 		self.validate_duplicate_plot_number()
 		self.validate_selling_price()
@@ -39,18 +45,28 @@ class PlotMaster(Document):
 			self.booking_fee_percent = 0
 			self.government_share_percent = 0
 			self.payment_completion_days = 0
+			self.selling_price_per_sqm_tzs = 0
 			return
 
 		defaults = frappe.db.get_value(
 			"Land Acquisition",
 			self.land_acquisition,
-			["booking_fee_percent", "government_share_percent", "payment_completion_days"],
+			[
+				"booking_fee_percent",
+				"government_share_percent",
+				"payment_completion_days",
+				"residential_selling_price_per_sqm_tzs",
+				"commercial_selling_price_per_sqm_tzs",
+				"mixed_use_selling_price_per_sqm_tzs",
+				"default_selling_price_per_sqm_tzs",
+			],
 			as_dict=True,
 		) or {}
 
 		self.booking_fee_percent = flt(defaults.get("booking_fee_percent"))
 		self.government_share_percent = flt(defaults.get("government_share_percent"))
 		self.payment_completion_days = int(defaults.get("payment_completion_days") or 0)
+		self.selling_price_per_sqm_tzs = get_plot_type_selling_rate(defaults, self.plot_type)
 
 	def fill_location_coordinates(self):
 		if not self.land_acquisition:
@@ -78,26 +94,29 @@ class PlotMaster(Document):
 				f"(current status: {status}). Only Approved/Subdivided acquisitions can be used."
 			)
 
-	def fill_allocated_cost(self):
-		if self.land_acquisition and not flt(self.allocated_cost):
-			cost = frappe.db.get_value(
-				"Land Acquisition", self.land_acquisition, "acquisition_cost_tzs"
-			)
-			expected_plots = frappe.db.get_value(
-				"Land Acquisition", self.land_acquisition, "total_area_sqm"
-			)
-			# allocated_cost_per_plot is stored on Land Acquisition
-			allocated = frappe.db.get_value(
-				"Land Acquisition", self.land_acquisition, "acquisition_cost_tzs"
-			)
-			# Get it from the document directly
-			la_doc = frappe.get_doc("Land Acquisition", self.land_acquisition)
-			if flt(la_doc.acquisition_cost_tzs) > 0 and flt(self.plot_size_sqm) > 0:
-				# Cost per sqm * this plot's sqm
-				total_sqm = flt(la_doc.total_area_sqm)
-				if total_sqm > 0:
-					cost_per_sqm = flt(la_doc.acquisition_cost_tzs) / total_sqm
-					self.allocated_cost = cost_per_sqm * flt(self.plot_size_sqm)
+	def fill_financials(self):
+		if not self.land_acquisition:
+			self.cost_per_sqm = 0
+			self.allocated_cost = 0
+			self.selling_price = 0
+			return
+
+		la_doc = frappe.get_doc("Land Acquisition", self.land_acquisition)
+		total_sqm = flt(la_doc.total_area_sqm)
+		plot_sqm = flt(self.plot_size_sqm)
+
+		self.cost_per_sqm = 0
+		self.allocated_cost = 0
+
+		if flt(la_doc.acquisition_cost_tzs) > 0 and total_sqm > 0:
+			self.cost_per_sqm = flt(la_doc.get("cost_per_sqm_tzs")) or (flt(la_doc.acquisition_cost_tzs) / total_sqm)
+			if plot_sqm > 0:
+				self.allocated_cost = self.cost_per_sqm * plot_sqm
+
+		if flt(self.selling_price_per_sqm_tzs) > 0 and plot_sqm > 0:
+			self.selling_price = flt(self.selling_price_per_sqm_tzs) * plot_sqm
+		else:
+			self.selling_price = 0
 
 	def validate_duplicate_plot_number(self):
 		if not self.plot_number or not self.land_acquisition:
@@ -119,6 +138,11 @@ class PlotMaster(Document):
 			)
 
 	def validate_selling_price(self):
+		if flt(self.selling_price_per_sqm_tzs) <= 0:
+			frappe.throw(
+				f"Set the {get_plot_type_rate_label(self.plot_type)} on Land Acquisition "
+				f"{self.land_acquisition} before creating this plot."
+			)
 		if flt(self.selling_price) <= 0:
 			frappe.throw("Selling Price must be greater than zero.")
 
@@ -197,3 +221,21 @@ class PlotMaster(Document):
 			se_doc.cancel()
 		self.db_set("stock_entry", None)
 		self.db_set("serial_no", None)
+
+
+def get_plot_type_selling_rate(acquisition_values, plot_type):
+	rate_field = PLOT_TYPE_TO_RATE_FIELD.get(plot_type)
+	if rate_field:
+		rate = flt((acquisition_values or {}).get(rate_field))
+		if rate > 0:
+			return rate
+
+	return flt((acquisition_values or {}).get("default_selling_price_per_sqm_tzs"))
+
+
+def get_plot_type_rate_label(plot_type):
+	return {
+		"Residential": "Residential Rate per sqm (TZS)",
+		"Commercial": "Commercial Rate per sqm (TZS)",
+		"Mixed-Use": "Mixed-Use Rate per sqm (TZS)",
+	}.get(plot_type, "plot selling rate")

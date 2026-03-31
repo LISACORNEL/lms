@@ -29,7 +29,9 @@ frappe.ui.form.on('Plot Master', {
 		if (!frm.doc.land_acquisition) {
 			frm.set_value('acquisition_name', '');
 			frm.set_value('cost_per_sqm', 0);
+			frm.set_value('selling_price_per_sqm_tzs', 0);
 			frm.set_value('allocated_cost', 0);
+			frm.set_value('selling_price', 0);
 			return;
 		}
 
@@ -48,52 +50,88 @@ frappe.ui.form.on('Plot Master', {
 					return;
 				}
 
-				frm.set_value('acquisition_name', doc.acquisition_name || '');
-				recalculate_costs(frm, doc);
+					frm.set_value('acquisition_name', doc.acquisition_name || '');
+					recalculate_costs(frm, doc);
 
-				frappe.show_alert({
-					message: `Land Acquisition selected: ${doc.name} - ${doc.acquisition_name || ''}. Cost per sqm has been loaded.`,
-					indicator: 'blue'
+					frappe.show_alert({
+						message: `Land Acquisition selected: ${doc.name} - ${doc.acquisition_name || ''}. Plot pricing defaults have been loaded.`,
+						indicator: 'blue'
+					});
 				});
-			});
-	},
+		},
 
-	plot_size_sqm: function(frm) {
-		if (frm.doc.land_acquisition && frm.doc.plot_size_sqm) {
-			frappe.db.get_doc('Land Acquisition', frm.doc.land_acquisition)
-				.then(doc => recalculate_costs(frm, doc));
-		} else {
-			frm.set_value('allocated_cost', 0);
+		plot_type: function(frm) {
+			if (frm.doc.land_acquisition) {
+				frappe.db.get_doc('Land Acquisition', frm.doc.land_acquisition)
+					.then(doc => recalculate_costs(frm, doc));
+			} else {
+				frm.set_value('selling_price_per_sqm_tzs', 0);
+				frm.set_value('selling_price', 0);
+			}
+		},
+
+		plot_size_sqm: function(frm) {
+			if (frm.doc.land_acquisition && frm.doc.plot_size_sqm) {
+				frappe.db.get_doc('Land Acquisition', frm.doc.land_acquisition)
+					.then(doc => recalculate_costs(frm, doc));
+			} else {
+				frm.set_value('allocated_cost', 0);
+				frm.set_value('selling_price', 0);
+			}
 		}
-	}
-});
+	});
 
 function recalculate_costs(frm, acquisition) {
 	if (!acquisition || !acquisition.total_area_sqm) {
 		frm.set_value('cost_per_sqm', 0);
+		frm.set_value('selling_price_per_sqm_tzs', getSellingPricePerSqm(acquisition, frm.doc.plot_type));
 		frm.set_value('allocated_cost', 0);
+		frm.set_value('selling_price', 0);
 		return;
 	}
 
-	const cost_per_sqm = flt(acquisition.acquisition_cost_tzs) / flt(acquisition.total_area_sqm);
+	const cost_per_sqm = flt(acquisition.cost_per_sqm_tzs) || (flt(acquisition.acquisition_cost_tzs) / flt(acquisition.total_area_sqm));
 	const allocated = cost_per_sqm * flt(frm.doc.plot_size_sqm);
+	const selling_price_per_sqm = getSellingPricePerSqm(acquisition, frm.doc.plot_type);
+	const suggested_selling_price = selling_price_per_sqm
+		? selling_price_per_sqm * flt(frm.doc.plot_size_sqm)
+		: 0;
 
 	frm.set_value('cost_per_sqm', cost_per_sqm);
+	frm.set_value('selling_price_per_sqm_tzs', selling_price_per_sqm);
 	frm.set_value('allocated_cost', allocated);
+	frm.set_value('selling_price', suggested_selling_price);
 
-	frm.set_df_property(
-		'cost_per_sqm',
-		'description',
-		`${flt(acquisition.acquisition_cost_tzs).toLocaleString()} TZS ÷ ${flt(acquisition.total_area_sqm).toLocaleString()} sqm`
-	);
-	frm.set_df_property(
-		'allocated_cost',
-		'description',
-		`${cost_per_sqm.toLocaleString()} TZS × ${flt(frm.doc.plot_size_sqm).toLocaleString()} sqm`
-	);
 	frm.set_df_property(
 		'selling_price',
 		'description',
-		`Base cost is ${allocated.toLocaleString()} TZS. Enter your selling price above this amount.`
+		selling_price_per_sqm
+			? `${selling_price_per_sqm.toLocaleString()} TZS × ${flt(frm.doc.plot_size_sqm).toLocaleString()} sqm = ${suggested_selling_price.toLocaleString()} TZS`
+			: `Set the ${getRateLabelForPlotType(frm.doc.plot_type)} on the selected Land Acquisition to auto-populate this plot's selling price.`
 	);
+}
+
+function getSellingPricePerSqm(acquisition, plotType) {
+	const rateFieldByPlotType = {
+		'Residential': 'residential_selling_price_per_sqm_tzs',
+		'Commercial': 'commercial_selling_price_per_sqm_tzs',
+		'Mixed-Use': 'mixed_use_selling_price_per_sqm_tzs',
+	};
+
+	const rateField = rateFieldByPlotType[plotType];
+	if (rateField && flt(acquisition?.[rateField]) > 0) {
+		return flt(acquisition[rateField]);
+	}
+
+	return flt(acquisition?.default_selling_price_per_sqm_tzs);
+}
+
+function getRateLabelForPlotType(plotType) {
+	const labelByPlotType = {
+		'Residential': 'Residential Rate per sqm (TZS)',
+		'Commercial': 'Commercial Rate per sqm (TZS)',
+		'Mixed-Use': 'Mixed-Use Rate per sqm (TZS)',
+	};
+
+	return labelByPlotType[plotType] || 'plot-type selling rate';
 }
